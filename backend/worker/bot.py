@@ -139,6 +139,7 @@ async def start_handler(event):
             f"Example: <code>+998901234567</code>",
             parse_mode='html'
         )
+@management_bot.on(events.CallbackQuery(pattern=b'admin_stats'))
 async def callback_stats(event):
     if not is_admin(event.sender_id):
         return
