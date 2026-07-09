@@ -1,8 +1,10 @@
 import pytest
+
 from services.parsers.click_parser import ClickParser
+from services.parsers.humo_parser import HumoParser
 from services.parsers.payme_parser import PaymeParser
 from services.parsers.uzcard_parser import UzcardParser
-from services.parsers.humo_parser import HumoParser
+
 
 @pytest.mark.parametrize("message_text,expected_tiyins", [
     ("🎉 To'ldirish\n➕ 35.000,00 UZS\n💳 VISA *4183", 3500000),

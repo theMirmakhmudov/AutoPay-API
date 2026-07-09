@@ -1,6 +1,8 @@
 import re
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from .base_parser import BaseParser
+
 
 class HumoParser(BaseParser):
     def parse(self, text: str) -> Optional[Dict[str, Any]]:
@@ -9,7 +11,7 @@ class HumoParser(BaseParser):
         # ➕ 50.000,00 UZS
         # ...
         # 💳 VISA *4183
-        
+
         amount_match = re.search(r'➕\s*([\d\s.,]+)\s*UZS', text)
         card_match = re.search(r'💳\s*([A-Za-z]+)?\s*\*(\d{4})', text, re.IGNORECASE)
 

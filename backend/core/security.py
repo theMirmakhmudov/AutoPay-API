@@ -1,6 +1,7 @@
-from fastapi import Security, HTTPException, status, Depends
+from fastapi import Depends, HTTPException, Security, status
 from fastapi.security.api_key import APIKeyHeader
 from sqlalchemy.orm import Session
+
 from core.database import get_db
 from core.encryption import hash_api_key
 from models.payment import Merchant

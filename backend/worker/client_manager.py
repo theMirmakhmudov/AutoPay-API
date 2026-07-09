@@ -1,14 +1,16 @@
 import asyncio
 import logging
+from typing import Dict
+
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
-from typing import Dict
-from models.payment import Merchant
-from services.payment_service import PaymentService, fire_webhook_with_retry
-from services.parsers.dispatcher import KNOWN_BOT_USERNAMES
-from schemas.payload import TelegramWebhookPayload
+
 from core.database import SessionLocal
 from core.encryption import decrypt_session
+from models.payment import Merchant
+from schemas.payload import TelegramWebhookPayload
+from services.parsers.dispatcher import KNOWN_BOT_USERNAMES
+from services.payment_service import PaymentService, fire_webhook_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +90,7 @@ class ClientManager:
                     asyncio.create_task(
                         fire_webhook_with_retry(webhook_url, payment.id, intent_id, payment.amount, webhook_secret)
                     )
-                
+
                 # Notify merchant via Telegram
                 try:
                     from worker.bot import management_bot

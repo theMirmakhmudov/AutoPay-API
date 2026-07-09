@@ -1,6 +1,9 @@
 import asyncio
+
 import httpx
+
 from core.config import settings
+
 
 async def test():
     chat_id = 6716993468

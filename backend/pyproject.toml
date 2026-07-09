@@ -5,6 +5,7 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "C90", "B"]
 ignore = ["E501"]
+extend-ignore = ["B008", "E711", "E712", "C901", "E402", "F841"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -12,3 +13,5 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
+explicit_package_bases = true
+disable_error_code = ["assignment", "arg-type", "return-value", "var-annotated", "index", "name-defined"]

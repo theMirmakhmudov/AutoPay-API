@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
+
 from core.security import get_current_merchant
-from schemas.merchant import MerchantView
-from schemas.base import BaseResponse, create_success_response
 from models.payment import Merchant
+from schemas.base import BaseResponse, create_success_response
+from schemas.merchant import MerchantView
 
 router = APIRouter()
 

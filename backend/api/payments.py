@@ -1,17 +1,26 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, WebSocket, WebSocketDisconnect, Request
-from sqlalchemy.orm import Session
-import asyncpg
 import asyncio
-import json
+
+import asyncpg
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from sqlalchemy.orm import Session
+
 from core.config import settings
 from core.database import get_db
-from core.security import get_current_merchant
 from core.rate_limit import limiter
-from schemas.payload import CreatePaymentRequest, CreatePaymentResponse, PaymentStatusResponse
-from schemas.base import BaseResponse, create_success_response, create_error_response
-from services.payment_service import PaymentService
-from repositories.payment_repo import PaymentRepository
+from core.security import get_current_merchant
 from models.payment import Merchant
+from repositories.payment_repo import PaymentRepository
+from schemas.base import BaseResponse, create_error_response, create_success_response
+from schemas.payload import CreatePaymentRequest, CreatePaymentResponse, PaymentStatusResponse
+from services.payment_service import PaymentService
 
 router = APIRouter()
 
@@ -95,45 +104,45 @@ def cancel_payment(
 @router.websocket("/ws/{payment_id}")
 async def websocket_payment_status(websocket: WebSocket, payment_id: str):
     """
-    Real-time WebSocket endpoint that listens to PostgreSQL NOTIFY 
+    Real-time WebSocket endpoint that listens to PostgreSQL NOTIFY
     and instantly pushes the PAID status to the frontend.
     """
     await websocket.accept()
-    
+
     conn = None
     try:
         # Use asyncpg for true async LISTEN/NOTIFY without blocking the event loop
         conn = await asyncpg.connect(settings.DATABASE_URL)
         queue = asyncio.Queue()
-        
+
         def handle_notify(connection, pid, channel, payload):
             if payload == payment_id:
                 queue.put_nowait(payload)
-                
+
         await conn.add_listener('payment_updates', handle_notify)
-        
+
         while True:
             # Race receiving a websocket message (to detect disconnects) vs receiving a postgres notification
             ws_task = asyncio.create_task(websocket.receive_text())
             q_task = asyncio.create_task(queue.get())
-            
+
             done, pending = await asyncio.wait(
-                [ws_task, q_task], 
+                [ws_task, q_task],
                 return_when=asyncio.FIRST_COMPLETED
             )
-            
+
             for task in pending:
                 task.cancel()
-                
+
             if q_task in done:
                 # Payment was marked PAID in the database!
                 await websocket.send_json({"payment_id": payment_id, "status": "PAID"})
                 break
-                
+
             if ws_task in done:
                 # If client disconnected, this raises WebSocketDisconnect
                 ws_task.result()
-                
+
     except WebSocketDisconnect:
         pass
     except Exception as e:

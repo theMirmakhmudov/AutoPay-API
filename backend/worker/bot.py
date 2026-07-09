@@ -1,19 +1,18 @@
-import asyncio
 import logging
-import csv
-import os
-import httpx
 from uuid import uuid4
+
+import httpx
 from sqlalchemy import func
-from telethon import TelegramClient, events, Button
-from telethon.sessions import StringSession
+from telethon import Button, TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
-from core.database import SessionLocal
+from telethon.sessions import StringSession
+
 from core.config import settings
+from core.database import SessionLocal
 from core.encryption import encrypt_session, generate_api_key, generate_webhook_secret
 from models.payment import Merchant, PaymentIntent, ProcessedPayment, UnparsedMessage
-from services.payment_service import PaymentService
 from schemas.payload import CreatePaymentRequest
+from services.payment_service import PaymentService
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,10 @@ def is_admin(user_id: int) -> bool:
     admin_ids = [int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()]
     return user_id in admin_ids
 
-async def send_or_edit_rich_message(event, html_content: str, reply_markup: dict = None):
+from typing import Optional
+
+
+async def send_or_edit_rich_message(event, html_content: str, reply_markup: Optional[dict] = None):
     if isinstance(event, events.CallbackQuery.Event):
         url = f"https://api.telegram.org/bot{settings.MANAGEMENT_BOT_TOKEN}/editMessageText"
         payload = {
@@ -58,10 +60,10 @@ async def send_or_edit_rich_message(event, html_content: str, reply_markup: dict
             "chat_id": event.chat_id,
             "rich_message": {"html": html_content}
         }
-        
+
     if reply_markup:
         payload["reply_markup"] = reply_markup
-        
+
     async with httpx.AsyncClient() as client:
         r = await client.post(url, json=payload)
         if r.status_code != 200:
@@ -74,17 +76,17 @@ async def stats_handler(event):
     if not is_admin(event.sender_id):
         await event.respond("❌ Access denied.")
         return
-        
+
     db = SessionLocal()
     total_merchants = db.query(Merchant).count()
     connected_merchants = db.query(Merchant).filter(Merchant.is_connected == True).count()
-    
+
     total_intents = db.query(PaymentIntent).count()
     paid_intents = db.query(PaymentIntent).filter(PaymentIntent.status == "PAID").count()
-    
+
     total_payments = db.query(ProcessedPayment).count()
     db.close()
-    
+
     html = (
         "<table bordered striped>"
         "<caption><b>🛡️ Admin Stats</b></caption>"
@@ -94,7 +96,7 @@ async def stats_handler(event):
         f"<tr><td>💰 Processed Payments</td><td>{total_payments}</td></tr>"
         "</table>"
     )
-    
+
     await send_or_edit_rich_message(event, html)
 
 @management_bot.on(events.NewMessage(pattern='/merchants'))
@@ -102,11 +104,11 @@ async def merchants_handler(event):
     if not is_admin(event.sender_id):
         await event.respond("❌ Access denied.")
         return
-        
+
     db = SessionLocal()
     merchants = db.query(Merchant).all()
     db.close()
-    
+
     html = "<b>👥 Registered Merchants</b><br/>"
     if not merchants:
         html += "<i>No merchants found.</i>"
@@ -114,7 +116,7 @@ async def merchants_handler(event):
         for m in merchants:
             status = "🟢" if m.is_connected else "🔴"
             html += f'<details><summary>{status} {m.phone_number}</summary><b>ID:</b> <code>{m.id}</code></details>'
-            
+
     await send_or_edit_rich_message(event, html)
 
 @management_bot.on(events.NewMessage(pattern=r'/ban (.+)'))
@@ -122,24 +124,24 @@ async def ban_handler(event):
     if not is_admin(event.sender_id):
         await event.respond("❌ Access denied.")
         return
-        
+
     merchant_id = event.pattern_match.group(1).strip()
     db = SessionLocal()
     merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
-    
+
     if not merchant:
         db.close()
         await event.respond("❌ Merchant not found.")
         return
-        
-    merchant.is_connected = False
-    merchant.session_string = None
+
+    merchant.is_connected = False  # type: ignore
+    merchant.session_string = None  # type: ignore
     db.commit()
     db.close()
-    
+
     if _client_manager:
         await _client_manager.stop_client(merchant_id)
-        
+
     await event.respond(f"✅ Merchant <code>{merchant_id}</code> banned and disconnected.", parse_mode='html')
 
 
@@ -148,7 +150,7 @@ async def ban_handler(event):
 @management_bot.on(events.NewMessage(pattern='/start'))
 async def start_handler(event):
     await _cleanup_state(event.sender_id)
-    
+
     if is_admin(event.sender_id):
         # Dynamically inject the Admin-only commands menu for this specific admin
         try:
@@ -175,7 +177,7 @@ async def start_handler(event):
             ))
         except Exception as e:
             logger.error(f"Failed to set admin commands menu: {e}")
-            
+
         await event.respond(
             "<b>🛡️ Admin Control Panel</b>",
             parse_mode='html',
@@ -190,9 +192,9 @@ async def start_handler(event):
     else:
         user_states[event.sender_id] = {"state": "AWAITING_PHONE"}
         await event.respond(
-            f"<b>👋 Welcome to Auto Payment Gateway!</b>\n\n"
-            f"Send your Uzbek phone number to link your account:\n"
-            f"Example: <code>+998901234567</code>",
+            "<b>👋 Welcome to Auto Payment Gateway!</b>\n\n"
+            "Send your Uzbek phone number to link your account:\n"
+            "Example: <code>+998901234567</code>",
             parse_mode='html'
         )
 @management_bot.on(events.CallbackQuery(pattern=b'admin_stats'))
@@ -206,7 +208,7 @@ async def callback_stats(event):
     paid_intents = db.query(PaymentIntent).filter(PaymentIntent.status == "PAID").count()
     total_payments = db.query(ProcessedPayment).count()
     db.close()
-    
+
     html = (
         "<table bordered striped>"
         "<caption><b>🛡️ Admin Stats</b></caption>"
@@ -216,13 +218,13 @@ async def callback_stats(event):
         f"<tr><td>💰 Processed Payments</td><td>{total_payments}</td></tr>"
         "</table>"
     )
-    
+
     reply_markup = {
         "inline_keyboard": [
             [{"text": "⬅️ Back", "callback_data": "admin_back"}]
         ]
     }
-    
+
     await event.answer()
     await send_or_edit_rich_message(event, html, reply_markup)
 
@@ -233,7 +235,7 @@ async def callback_merchants(event):
     db = SessionLocal()
     merchants = db.query(Merchant).all()
     db.close()
-    
+
     html = "<b>👥 Registered Merchants</b><br/>"
     if not merchants:
         html += "<i>No merchants found.</i>"
@@ -241,7 +243,7 @@ async def callback_merchants(event):
         for m in merchants:
             status = "🟢" if m.is_connected else "🔴"
             html += f'<details><summary>{status} {m.phone_number}</summary><b>ID:</b> <code>{m.id}</code></details>'
-            
+
     reply_markup = {
         "inline_keyboard": [
             [{"text": "⬅️ Back", "callback_data": "admin_back"}]
@@ -258,7 +260,7 @@ async def callback_revenue(event):
     revenue_tiyins = db.query(func.sum(PaymentIntent.expected_amount_tiyins)).filter(PaymentIntent.status == "PAID").scalar() or 0
     total_revenue = revenue_tiyins / 100
     db.close()
-    
+
     html = (
         "<aside>"
         "<b>💰 Revenue Tracker</b><br/>"
@@ -281,7 +283,7 @@ async def callback_recent(event):
     db = SessionLocal()
     recent = db.query(ProcessedPayment).order_by(ProcessedPayment.date_received.desc()).limit(5).all()
     db.close()
-    
+
     html = "<b>📈 Recent Transactions</b><br/>"
     if not recent:
         html += "<i>No transactions yet.</i>"
@@ -291,7 +293,7 @@ async def callback_recent(event):
             amount = r.amount_tiyins / 100
             html += f"<li><b>{amount:,.2f} UZS</b> via {r.source}<br/>Date: {r.date_received.strftime('%Y-%m-%d %H:%M')}<br/>Status: {r.status}</li>"
         html += "</ul>"
-        
+
     reply_markup = {
         "inline_keyboard": [
             [{"text": "⬅️ Back", "callback_data": "admin_back"}]
@@ -307,7 +309,7 @@ async def callback_errors(event):
     db = SessionLocal()
     errors = db.query(UnparsedMessage).filter(UnparsedMessage.is_resolved == False).order_by(UnparsedMessage.date_received.desc()).limit(5).all()
     db.close()
-    
+
     html = "<b>⚠️ Recent Unparsed Messages (Dead Letter Queue)</b><br/>"
     if not errors:
         html += "✅ <i>All systems normal. No recent parsing errors.</i>"
@@ -316,7 +318,7 @@ async def callback_errors(event):
         for e in errors:
             html += f"<li><b>Error:</b> {e.error_reason}<br/><b>Date:</b> {e.date_received.strftime('%Y-%m-%d %H:%M')}<br/><code>{e.raw_text[:50]}...</code></li>"
         html += "</ol>"
-        
+
     reply_markup = {
         "inline_keyboard": [
             [{"text": "⬅️ Back", "callback_data": "admin_back"}]
@@ -344,15 +346,15 @@ async def callback_payments_table(event):
     page = int(event.pattern_match.group(1))
     per_page = 15
     offset = page * per_page
-    
+
     db = SessionLocal()
     total_count = db.query(ProcessedPayment).count()
     payments = db.query(ProcessedPayment, Merchant).join(Merchant, ProcessedPayment.merchant_id == Merchant.id).order_by(ProcessedPayment.date_received.desc()).offset(offset).limit(per_page).all()
     db.close()
-    
+
     html = f"<table bordered striped><caption><b>📊 Payments Database (Page {page+1})</b></caption>"
     html += "<tr><th>Date</th><th>Phone</th><th>Amount</th><th>Src</th></tr>"
-    
+
     for p, m in payments:
         date_str = p.date_received.strftime("%m-%d")
         phone = m.phone_number[-9:] if (m.phone_number and len(m.phone_number) >= 9) else "Unknown"
@@ -364,27 +366,27 @@ async def callback_payments_table(event):
         else:
             amt_str = str(int(amt))
         src = p.source[:4] if p.source else "UNK"
-        
+
         html += f"<tr><td>{date_str}</td><td>{phone}</td><td>{amt_str}</td><td>{src}</td></tr>"
-        
+
     html += f"</table><p><i>Total records: {total_count}</i></p>"
-    
+
     if total_count == 0:
         html = "<p><b>📊 Payments Database</b><br/><i>No payments found.</i></p>"
-    
+
     inline_keyboard = []
     nav_row = []
     if page > 0:
         nav_row.append({"text": "⬅️ Prev", "callback_data": f"admin_payments_{page-1}"})
     if offset + per_page < total_count:
         nav_row.append({"text": "Next ➡️", "callback_data": f"admin_payments_{page+1}"})
-        
+
     if nav_row:
         inline_keyboard.append(nav_row)
     inline_keyboard.append([{"text": "⬅️ Back to Admin Panel", "callback_data": "admin_back"}])
-    
+
     reply_markup = {"inline_keyboard": inline_keyboard}
-    
+
     await event.answer()
     await send_or_edit_rich_message(event, html, reply_markup)
 
@@ -417,11 +419,11 @@ async def credentials_handler(event):
     merchant_name = f"Merchant_{event.sender_id}"
     merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
     db.close()
-    
+
     if not merchant:
         await event.respond("❌ You are not connected. Send /start")
         return
-        
+
     await event.respond(
         f"<b>🔐 Your Credentials</b>\n\n"
         f"<b>🆔 Merchant ID:</b> <code>{merchant.id}</code>\n"
@@ -437,7 +439,7 @@ async def status_handler(event):
     merchant_name = f"Merchant_{event.sender_id}"
     merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
     db.close()
-    
+
     if merchant and merchant.is_connected:
         await event.respond("✅ Your account is connected and actively listening for payments.\nUse /create <amount> to generate a payment intent.")
     else:
@@ -447,22 +449,22 @@ async def status_handler(event):
 async def create_payment_handler(event):
     amount_str = event.pattern_match.group(1).strip()
     base_amount = float(amount_str)
-    
+
     db = SessionLocal()
     merchant_name = f"Merchant_{event.sender_id}"
     merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
-    
+
     if not merchant or not merchant.is_connected:
         db.close()
         await event.respond("❌ You must be connected to create a payment. Send /start")
         return
-        
+
     service = PaymentService(db)
     req = CreatePaymentRequest(base_amount=base_amount)
     try:
-        intent = service.create_payment_intent(merchant.id, req)
+        intent = service.create_payment_intent(str(merchant.id), req)
         display_amount = f"{intent.expected_amount / 100:,.2f} UZS"
-        
+
         await event.respond(
             f"<b>💰 Payment Intent Created</b>\n\n"
             f"Forward this to your customer:\n"
@@ -499,8 +501,8 @@ async def disconnect_handler(event):
     merchant_name = f"Merchant_{event.sender_id}"
     merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
     if merchant:
-        merchant.is_connected = False
-        merchant.session_string = None
+        merchant.is_connected = False  # type: ignore
+        merchant.session_string = None  # type: ignore
         if _client_manager:
             await _client_manager.stop_client(merchant.id)
         db.commit()
@@ -527,26 +529,26 @@ async def message_handler(event):
         if not text:
             await event.respond("❌ Broadcast message cannot be empty.")
             return
-            
+
         await event.respond("⏳ Broadcasting to all merchants...")
         db = SessionLocal()
         merchants = db.query(Merchant).all()
         db.close()
-        
+
         success_count = 0
         for m in merchants:
             try:
                 if m.name.startswith("Merchant_"):
                     m_id = int(m.name.split("_")[1])
                     await management_bot.send_message(
-                        m_id, 
+                        m_id,
                         f"📢 <b>Announcement from Admin</b>\n\n{text}",
                         parse_mode='html'
                     )
                     success_count += 1
             except Exception as e:
                 logger.error(f"Failed to broadcast to {m.name}: {e}")
-                
+
         user_states.pop(user_id, None)
         await event.respond(f"✅ Broadcast sent successfully to {success_count} merchants.")
         return
@@ -612,12 +614,12 @@ async def message_handler(event):
             await _finish_login(event, temp_client, phone, user_id)
         except Exception as e:
             logger.error(f"2FA sign_in failed: {e}")
-            await event.respond(f"❌ Wrong password. Send /start to try again.")
+            await event.respond("❌ Wrong password. Send /start to try again.")
             await _cleanup_state(user_id)
 
 
 async def _finish_login(event, temp_client: TelegramClient, phone: str, user_id: int):
-    session_string = temp_client.session.save()
+    session_string = temp_client.session.save()  # type: ignore
     await temp_client.disconnect()
 
     db = SessionLocal()

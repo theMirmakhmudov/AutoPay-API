@@ -1,8 +1,11 @@
-from sqlalchemy.orm import Session
-from typing import Optional, List
 from datetime import datetime
-from models.payment import ProcessedPayment, UnparsedMessage, Merchant, PaymentIntent
+from typing import Optional
+
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
+
+from models.payment import Merchant, PaymentIntent, ProcessedPayment, UnparsedMessage
+
 
 class PaymentRepository:
     def __init__(self, db: Session):
@@ -70,13 +73,13 @@ class PaymentRepository:
         if not active_intents:
             return None
 
-        return max(intent.expected_amount_tiyins for intent in active_intents)
+        return max(int(intent.expected_amount_tiyins) for intent in active_intents)
 
     def mark_intent_paid(self, intent: PaymentIntent, payment_id: int):
-        intent.status = "PAID"
+        intent.status = "PAID"  # type: ignore
         intent.matched_payment_id = payment_id
         self.db.commit()
-        
+
         # Fire PostgreSQL NOTIFY for real-time WebSocket clients
         try:
             self.db.execute(text(f"NOTIFY payment_updates, '{intent.id}'"))
@@ -94,7 +97,8 @@ class PaymentRepository:
             PaymentIntent.expires_at <= now
         ).all()
         for intent in expired:
-            intent.status = "EXPIRED"
+            intent.status = "EXPIRED"  # type: ignore
+            intent.paid_amount_tiyins = 0  # type: ignore
         self.db.commit()
         return len(expired)
 

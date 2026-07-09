@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
 from core.database import get_db
 from core.security import get_current_merchant
-from schemas.payload import TelegramWebhookPayload
-from schemas.base import BaseResponse, create_success_response, create_error_response
-from services.payment_service import PaymentService
-from repositories.payment_repo import PaymentRepository
 from models.payment import Merchant
+from schemas.base import BaseResponse, create_error_response, create_success_response
+from schemas.payload import TelegramWebhookPayload
+from services.payment_service import PaymentService
 
 router = APIRouter()
 

@@ -1,13 +1,16 @@
 import asyncio
-import httpx
-import logging
-from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
-from schemas.payload import TelegramWebhookPayload, CreatePaymentRequest, CreatePaymentResponse
-from repositories.payment_repo import PaymentRepository
-import hmac
 import hashlib
+import hmac
 import json
+import logging
+from datetime import datetime, timedelta
+from typing import Optional
+
+import httpx
+from sqlalchemy.orm import Session
+
+from repositories.payment_repo import PaymentRepository
+from schemas.payload import CreatePaymentRequest, CreatePaymentResponse, TelegramWebhookPayload
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +35,7 @@ class PaymentService:
         has_collision = False
         if max_expected is not None:
             next_expected = max_expected + 1  # +1 tiyin = +0.01 UZS
-            
+
             # Fix #5: If we've already gone 10 UZS above base, don't increment further
             if (next_expected - base_tiyins) > MAX_COLLISION_OFFSET_TIYINS:
                 # Too many collisions — tell frontend to show "please wait" only
@@ -55,13 +58,13 @@ class PaymentService:
         )
 
         return CreatePaymentResponse(
-            payment_id=intent.id,
-            status=intent.status,
-            base_amount=intent.base_amount,
+            payment_id=str(intent.id),
+            status=str(intent.status),
+            base_amount=float(intent.base_amount_tiyins) / 100.0,
             has_collision=has_collision,
             force_wait=force_wait,
-            expected_amount=intent.expected_amount,
-            expires_at=intent.expires_at
+            expected_amount=float(intent.expected_amount_tiyins) / 100.0,
+            expires_at=intent.expires_at  # type: ignore
         )
 
     def process_telegram_webhook(self, payload: TelegramWebhookPayload, merchant_id: str) -> dict:
@@ -125,7 +128,7 @@ class PaymentService:
             saved_payment = self.repo.save_payment(db_payment_data)
             return {"status": "PROCESSED_UNMATCHED", "payment": saved_payment}
 
-async def fire_webhook_with_retry(url: str, payment_id: int, intent_id: str, amount: float, secret: str = None):
+async def fire_webhook_with_retry(webhook_url: str, processed_payment_id: str, intent_id: str, amount_tiyins: int, secret: Optional[str] = None):
     """
     Fix #2: Properly async webhook firing.
     Fix #10: Retries 3 times with exponential backoff (1s, 2s, 4s).
@@ -135,12 +138,12 @@ async def fire_webhook_with_retry(url: str, payment_id: int, intent_id: str, amo
         "event": "payment.success",
         "data": {
             "intent_id": intent_id,
-            "payment_id": payment_id,
-            "amount": amount,
+            "payment_id": processed_payment_id,
+            "amount": amount_tiyins / 100.0,
             "status": "PAID"
         }
     }
-    
+
     headers = {"Content-Type": "application/json"}
     if secret:
         payload_bytes = json.dumps(payload, separators=(',', ':')).encode('utf-8')
@@ -150,9 +153,9 @@ async def fire_webhook_with_retry(url: str, payment_id: int, intent_id: str, amo
     async with httpx.AsyncClient() as client:
         for attempt in range(3):
             try:
-                resp = await client.post(url, json=payload, headers=headers, timeout=5.0)
+                resp = await client.post(webhook_url, json=payload, headers=headers, timeout=5.0)
                 resp.raise_for_status()
-                logger.info(f"Webhook delivered to {url} (attempt {attempt + 1})")
+                logger.info(f"Webhook delivered to {webhook_url} (attempt {attempt + 1})")
                 return
             except Exception as e:
                 wait = 2 ** attempt  # 1s, 2s, 4s

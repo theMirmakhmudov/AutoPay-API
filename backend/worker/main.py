@@ -1,12 +1,13 @@
 import asyncio
 import logging
-from services.payment_service import fire_webhook_with_retry
-from worker.bot import management_bot, BOT_TOKEN, API_ID, API_HASH, set_client_manager
-from worker.client_manager import ClientManager
-from telethon.tl.functions.bots import SetBotCommandsRequest
-from telethon.tl.types import BotCommand, BotCommandScopeDefault, BotCommandScopePeer
 import os
+
 import sentry_sdk
+from telethon.tl.functions.bots import SetBotCommandsRequest
+from telethon.tl.types import BotCommand, BotCommandScopeDefault
+
+from worker.bot import API_HASH, API_ID, BOT_TOKEN, management_bot, set_client_manager
+from worker.client_manager import ClientManager
 
 sentry_dsn = os.getenv("SENTRY_DSN")
 if sentry_dsn:

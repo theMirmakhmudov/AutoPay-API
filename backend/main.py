@@ -1,11 +1,12 @@
+import os
+
+import sentry_sdk
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+
+from api import merchants, payments, webhooks
 from core.config import settings
-from core.database import engine
-from api import webhooks, payments, merchants
-import os
-import sentry_sdk
 
 sentry_dsn = os.getenv("SENTRY_DSN")
 if sentry_dsn:
@@ -13,12 +14,14 @@ if sentry_dsn:
         dsn=sentry_dsn,
         traces_sample_rate=1.0,
     )
-from slowapi.errors import RateLimitExceeded
+from contextlib import asynccontextmanager
+
 from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+
 from core.rate_limit import limiter
 
-from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

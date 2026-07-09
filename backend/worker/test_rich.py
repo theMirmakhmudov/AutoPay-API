@@ -1,6 +1,9 @@
 import asyncio
+
 import httpx
+
 from core.config import settings
+
 
 async def test():
     # We will send a message to the admin chat (6716993468)

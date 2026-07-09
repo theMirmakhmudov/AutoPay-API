@@ -1,6 +1,8 @@
 import re
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from .base_parser import BaseParser
+
 
 class CardXabarParser(BaseParser):
     def parse(self, text: str) -> Optional[Dict[str, Any]]:

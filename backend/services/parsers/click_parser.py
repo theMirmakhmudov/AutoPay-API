@@ -1,12 +1,13 @@
 import re
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from .base_parser import BaseParser
 
 
 class ClickParser(BaseParser):
     """
     Parses P2P transfer messages from @clickuz bot.
-    
+
     Sample:
     🎉 To'ldirish
     ➕ 35.000,00 UZS

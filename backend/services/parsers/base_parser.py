@@ -1,12 +1,12 @@
 import re
-from typing import Optional, Dict, Any
-from datetime import datetime
+from typing import Any, Dict, Optional
+
 
 class BaseParser:
     """
     Abstract base class for all bot parsers.
     """
-    
+
     def parse(self, text: str) -> Optional[Dict[str, Any]]:
         raise NotImplementedError()
 
@@ -15,7 +15,7 @@ class BaseParser:
         """
         Converts Uzbek-format amount strings to integer TIYINS.
         This avoids all float precision issues for money comparison.
-        
+
         Examples:
           "35.000,00" -> 3500000   (35000 UZS in tiyins)
           "35 000,00" -> 3500000
@@ -24,7 +24,7 @@ class BaseParser:
         """
         # Remove all whitespace
         amount_str = re.sub(r'\s+', '', amount_str)
-        
+
         # If it has both dot and comma, assume European (1.234,56)
         if '.' in amount_str and ',' in amount_str:
             amount_str = amount_str.replace('.', '').replace(',', '.')
@@ -36,7 +36,7 @@ class BaseParser:
             else:
                 # Otherwise it's probably a thousands separator (e.g. 500,000)
                 amount_str = amount_str.replace(',', '')
-                
+
         clean_str = re.sub(r'[^\d.]', '', amount_str)
         try:
             return round(float(clean_str) * 100)  # store as tiyins (integer)

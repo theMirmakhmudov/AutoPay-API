@@ -4,12 +4,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from main import app
 from core.database import get_db
-from models.base import Base
-from core.security import get_current_merchant
-from models.payment import Merchant
 from core.encryption import generate_api_key
+from core.security import get_current_merchant
+from main import app
+from models.base import Base
+from models.payment import Merchant
 
 # Use in-memory SQLite for testing to avoid touching Postgres
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -52,9 +52,9 @@ def test_merchant(db_session):
     db_session.add(merchant)
     db_session.commit()
     db_session.refresh(merchant)
-    
+
     # Attach raw api key for test client usage
-    merchant.raw_api_key = raw_api_key 
+    merchant.raw_api_key = raw_api_key
     return merchant
 
 @pytest.fixture(scope="function")
@@ -62,7 +62,7 @@ def client(test_merchant):
     # Disable rate limiter for tests
     from main import limiter
     limiter.enabled = False
-    
+
     # Override auth to use our test merchant
     app.dependency_overrides[get_current_merchant] = lambda: test_merchant
     with TestClient(app) as c:
