@@ -107,16 +107,15 @@ async def merchants_handler(event):
     merchants = db.query(Merchant).all()
     db.close()
     
+    html = "<b>👥 Registered Merchants</b><br/>"
     if not merchants:
-        await event.respond("No merchants found.")
-        return
-        
-    text = "<b>👥 Registered Merchants</b>\n\n"
-    for m in merchants:
-        status = "🟢" if m.is_connected else "🔴"
-        text += f"{status} <code>{m.id}</code>\n<b>Phone:</b> {m.phone_number}\n\n"
-        
-    await event.respond(text[:4000], parse_mode='html')
+        html += "<i>No merchants found.</i>"
+    else:
+        for m in merchants:
+            status = "🟢" if m.is_connected else "🔴"
+            html += f'<details><summary>{status} {m.phone_number}</summary><b>ID:</b> <code>{m.id}</code></details>'
+            
+    await send_or_edit_rich_message(event, html)
 
 @management_bot.on(events.NewMessage(pattern=r'/ban (.+)'))
 async def ban_handler(event):
@@ -235,15 +234,21 @@ async def callback_merchants(event):
     merchants = db.query(Merchant).all()
     db.close()
     
-    text = "<b>👥 Registered Merchants</b>\n\n"
+    html = "<b>👥 Registered Merchants</b><br/>"
     if not merchants:
-        text += "No merchants found."
+        html += "<i>No merchants found.</i>"
     else:
         for m in merchants:
             status = "🟢" if m.is_connected else "🔴"
-            text += f"{status} <code>{m.id}</code>\n<b>Phone:</b> {m.phone_number}\n\n"
+            html += f'<details><summary>{status} {m.phone_number}</summary><b>ID:</b> <code>{m.id}</code></details>'
             
-    await event.edit(text[:4000], parse_mode='html', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
+        ]
+    }
+    await event.answer()
+    await send_or_edit_rich_message(event, html, reply_markup)
 
 @management_bot.on(events.CallbackQuery(pattern=b'admin_revenue'))
 async def callback_revenue(event):
@@ -254,13 +259,20 @@ async def callback_revenue(event):
     total_revenue = revenue_tiyins / 100
     db.close()
     
-    await event.edit(
-        f"<b>💰 Revenue Tracker</b>\n\n"
-        f"<b>Total Volume Processed:</b> {total_revenue:,.2f} UZS\n\n"
-        f"<i>(This is the sum of all successfully paid payment intents)</i>",
-        parse_mode='html',
-        buttons=[[Button.inline("⬅️ Back", b"admin_back")]]
+    html = (
+        "<aside>"
+        "<b>💰 Revenue Tracker</b><br/>"
+        f"<b>Total Volume Processed:</b> {total_revenue:,.2f} UZS<br/>"
+        "<cite>(This is the sum of all successfully paid payment intents)</cite>"
+        "</aside>"
     )
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
+        ]
+    }
+    await event.answer()
+    await send_or_edit_rich_message(event, html, reply_markup)
 
 @management_bot.on(events.CallbackQuery(pattern=b'admin_recent'))
 async def callback_recent(event):
@@ -270,14 +282,23 @@ async def callback_recent(event):
     recent = db.query(ProcessedPayment).order_by(ProcessedPayment.date_received.desc()).limit(5).all()
     db.close()
     
-    text = "<b>📈 Recent Transactions</b>\n\n"
+    html = "<b>📈 Recent Transactions</b><br/>"
     if not recent:
-        text += "No transactions yet."
-    for r in recent:
-        amount = r.amount_tiyins / 100
-        text += f"▪️ <b>{amount:,.2f} UZS</b> via {r.source}\n   Date: {r.date_received.strftime('%Y-%m-%d %H:%M')}\n   Status: {r.status}\n\n"
+        html += "<i>No transactions yet.</i>"
+    else:
+        html += "<ul>"
+        for r in recent:
+            amount = r.amount_tiyins / 100
+            html += f"<li><b>{amount:,.2f} UZS</b> via {r.source}<br/>Date: {r.date_received.strftime('%Y-%m-%d %H:%M')}<br/>Status: {r.status}</li>"
+        html += "</ul>"
         
-    await event.edit(text[:4000], parse_mode='html', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
+        ]
+    }
+    await event.answer()
+    await send_or_edit_rich_message(event, html, reply_markup)
 
 @management_bot.on(events.CallbackQuery(pattern=b'admin_errors'))
 async def callback_errors(event):
@@ -287,13 +308,22 @@ async def callback_errors(event):
     errors = db.query(UnparsedMessage).filter(UnparsedMessage.is_resolved == False).order_by(UnparsedMessage.date_received.desc()).limit(5).all()
     db.close()
     
-    text = "<b>⚠️ Recent Unparsed Messages (Dead Letter Queue)</b>\n\n"
+    html = "<b>⚠️ Recent Unparsed Messages (Dead Letter Queue)</b><br/>"
     if not errors:
-        text += "✅ All systems normal. No recent parsing errors."
-    for e in errors:
-        text += f"▪️ <b>Error:</b> {e.error_reason}\n   <b>Date:</b> {e.date_received.strftime('%Y-%m-%d %H:%M')}\n   <code>{e.raw_text[:50]}...</code>\n\n"
+        html += "✅ <i>All systems normal. No recent parsing errors.</i>"
+    else:
+        html += "<ol>"
+        for e in errors:
+            html += f"<li><b>Error:</b> {e.error_reason}<br/><b>Date:</b> {e.date_received.strftime('%Y-%m-%d %H:%M')}<br/><code>{e.raw_text[:50]}...</code></li>"
+        html += "</ol>"
         
-    await event.edit(text[:4000], parse_mode='html', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
+        ]
+    }
+    await event.answer()
+    await send_or_edit_rich_message(event, html, reply_markup)
 
 @management_bot.on(events.CallbackQuery(pattern=b'admin_broadcast'))
 async def callback_broadcast(event):
