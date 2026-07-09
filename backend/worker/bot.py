@@ -130,7 +130,7 @@ async def start_handler(event):
                 [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
                 [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
                 [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
-                [Button.inline("📥 Export CSV", b"admin_export_csv")],
+                [Button.inline("📊 View All Payments", b"admin_payments_0")],
                 [Button.inline("❌ Close", b"admin_close")]
             ]
         )
@@ -242,30 +242,51 @@ async def callback_broadcast(event):
         buttons=[[Button.inline("⬅️ Cancel", b"admin_back")]]
     )
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_export_csv'))
-async def callback_export_csv(event):
+@management_bot.on(events.CallbackQuery(pattern=br'admin_payments_(\d+)'))
+async def callback_payments_table(event):
     if not is_admin(event.sender_id):
         return
-    await event.answer("Generating CSV... Please wait.")
+    page = int(event.pattern_match.group(1))
+    per_page = 15
+    offset = page * per_page
     
     db = SessionLocal()
-    # Join payments with merchants to get the merchant's phone number
-    payments = db.query(ProcessedPayment, Merchant).join(Merchant, ProcessedPayment.merchant_id == Merchant.id).order_by(ProcessedPayment.date_received.desc()).all()
+    total_count = db.query(ProcessedPayment).count()
+    payments = db.query(ProcessedPayment, Merchant).join(Merchant, ProcessedPayment.merchant_id == Merchant.id).order_by(ProcessedPayment.date_received.desc()).offset(offset).limit(per_page).all()
     db.close()
     
-    filename = f"payments_export_{uuid4().hex[:8]}.csv"
-    try:
-        with open(filename, "w", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["Transaction ID", "Merchant ID", "Merchant Phone", "Amount (UZS)", "Source", "Status", "Date"])
-            for p, m in payments:
-                amount_uzs = p.amount_tiyins / 100
-                writer.writerow([p.id, m.id, m.phone_number, amount_uzs, p.source, p.status, p.date_received.strftime('%Y-%m-%d %H:%M:%S')])
-                
-        await event.client.send_file(event.sender_id, filename, caption="📊 Full Database Export of All Payments")
-    finally:
-        if os.path.exists(filename):
-            os.remove(filename)
+    table = f"{'Date':<5} | {'Phone':<9} | {'Amount':<7} | {'Src':<4}\n"
+    table += "-" * 33 + "\n"
+    for p, m in payments:
+        date_str = p.date_received.strftime("%m-%d")
+        phone = m.phone_number[-9:] if (m.phone_number and len(m.phone_number) >= 9) else "Unknown  "
+        amt = p.amount_tiyins / 100
+        if amt >= 1000000:
+            amt_str = f"{amt/1000000:.1f}M"
+        elif amt >= 1000:
+            amt_str = f"{amt/1000:.0f}k"
+        else:
+            amt_str = str(int(amt))
+        src = p.source[:4] if p.source else "UNK"
+        
+        table += f"{date_str:<5} | {phone:<9} | {amt_str:<7} | {src:<4}\n"
+        
+    text = f"<b>📊 Payments Database (Page {page+1})</b>\n\n"
+    if total_count == 0:
+        text += "<i>No payments found.</i>\n"
+    else:
+        text += f"<pre>{table}</pre>\n"
+    text += f"<i>Total records: {total_count}</i>"
+    
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append(Button.inline("⬅️ Prev", f"admin_payments_{page-1}".encode()))
+    if offset + per_page < total_count:
+        nav_buttons.append(Button.inline("Next ➡️", f"admin_payments_{page+1}".encode()))
+        
+    buttons = [nav_buttons, [Button.inline("⬅️ Back to Admin Panel", b"admin_back")]] if nav_buttons else [[Button.inline("⬅️ Back to Admin Panel", b"admin_back")]]
+    
+    await event.edit(text, parse_mode='html', buttons=buttons)
 
 @management_bot.on(events.CallbackQuery(pattern=b'admin_back'))
 async def callback_back(event):
@@ -278,7 +299,7 @@ async def callback_back(event):
             [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
             [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
             [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
-            [Button.inline("📥 Export CSV", b"admin_export_csv")],
+            [Button.inline("📊 View All Payments", b"admin_payments_0")],
             [Button.inline("❌ Close", b"admin_close")]
         ]
     )
