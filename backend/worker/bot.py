@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import csv
+import os
 from uuid import uuid4
 from sqlalchemy import func
 from telethon import TelegramClient, events, Button
@@ -128,6 +130,7 @@ async def start_handler(event):
                 [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
                 [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
                 [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
+                [Button.inline("📥 Export CSV", b"admin_export_csv")],
                 [Button.inline("❌ Close", b"admin_close")]
             ]
         )
@@ -239,6 +242,31 @@ async def callback_broadcast(event):
         buttons=[[Button.inline("⬅️ Cancel", b"admin_back")]]
     )
 
+@management_bot.on(events.CallbackQuery(pattern=b'admin_export_csv'))
+async def callback_export_csv(event):
+    if not is_admin(event.sender_id):
+        return
+    await event.answer("Generating CSV... Please wait.")
+    
+    db = SessionLocal()
+    # Join payments with merchants to get the merchant's phone number
+    payments = db.query(ProcessedPayment, Merchant).join(Merchant, ProcessedPayment.merchant_id == Merchant.id).order_by(ProcessedPayment.date_received.desc()).all()
+    db.close()
+    
+    filename = f"payments_export_{uuid4().hex[:8]}.csv"
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Transaction ID", "Merchant ID", "Merchant Phone", "Amount (UZS)", "Source", "Status", "Date"])
+            for p, m in payments:
+                amount_uzs = p.amount_tiyins / 100
+                writer.writerow([p.id, m.id, m.phone_number, amount_uzs, p.source, p.status, p.date_received.strftime('%Y-%m-%d %H:%M:%S')])
+                
+        await event.client.send_file(event.sender_id, filename, caption="📊 Full Database Export of All Payments")
+    finally:
+        if os.path.exists(filename):
+            os.remove(filename)
+
 @management_bot.on(events.CallbackQuery(pattern=b'admin_back'))
 async def callback_back(event):
     if not is_admin(event.sender_id):
@@ -250,6 +278,7 @@ async def callback_back(event):
             [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
             [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
             [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
+            [Button.inline("📥 Export CSV", b"admin_export_csv")],
             [Button.inline("❌ Close", b"admin_close")]
         ]
     )
