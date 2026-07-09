@@ -7,34 +7,16 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Tailscale
-        uses: tailscale/github-action@v2
-        with:
-          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          version: latest
-
-      - name: Copy Files to Server
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          source: "."
-          target: "~/AvtoPaymentBot"
+      - name: Sync Files to Production Directory
+        run: |
+          rsync -avz --exclude '.env' --exclude 'venv' --exclude '__pycache__' --exclude 'scratch' --exclude '.git' ./ ~/AvtoPaymentBot/
 
       - name: Restart Docker Containers
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            cd ~/AvtoPaymentBot/backend
-            echo '${{ secrets.SERVER_PASSWORD }}' | sudo -S docker-compose restart api worker
+        run: |
+          cd ~/AvtoPaymentBot/backend
+          echo 'master' | sudo -S docker-compose restart api worker
