@@ -2,6 +2,7 @@ import asyncio
 import logging
 import csv
 import os
+import httpx
 from uuid import uuid4
 from sqlalchemy import func
 from telethon import TelegramClient, events, Button
@@ -43,6 +44,29 @@ def is_admin(user_id: int) -> bool:
     admin_ids = [int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()]
     return user_id in admin_ids
 
+async def send_or_edit_rich_message(event, html_content: str, reply_markup: dict = None):
+    if isinstance(event, events.CallbackQuery.Event):
+        url = f"https://api.telegram.org/bot{settings.MANAGEMENT_BOT_TOKEN}/editMessageText"
+        payload = {
+            "chat_id": event.chat_id,
+            "message_id": event.message_id,
+            "rich_message": {"html": html_content}
+        }
+    else:
+        url = f"https://api.telegram.org/bot{settings.MANAGEMENT_BOT_TOKEN}/sendRichMessage"
+        payload = {
+            "chat_id": event.chat_id,
+            "rich_message": {"html": html_content}
+        }
+        
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+        
+    async with httpx.AsyncClient() as client:
+        r = await client.post(url, json=payload)
+        if r.status_code != 200:
+            logger.error(f"Failed to send/edit rich message: {r.text}")
+
 # ── Admin Commands ─────────────────────────────────────────────────────────
 
 @management_bot.on(events.NewMessage(pattern='/stats'))
@@ -60,16 +84,18 @@ async def stats_handler(event):
     
     total_payments = db.query(ProcessedPayment).count()
     db.close()
-    table = f"{'Metric':<15} | {'Value':<12}\n"
-    table += "-" * 30 + "\n"
-    table += f"{'Merchants':<15} | {f'{connected_merchants}/{total_merchants}':<12}\n"
-    table += f"{'Invoices(Paid)':<15} | {f'{paid_intents}/{total_intents}':<12}\n"
-    table += f"{'Total Processed':<15} | {total_payments:<12}\n"
     
-    await event.respond(
-        f"<b>🛡️ Admin Stats</b>\n\n<pre>{table}</pre>",
-        parse_mode='html'
+    html = (
+        "<table bordered striped>"
+        "<caption><b>🛡️ Admin Stats</b></caption>"
+        "<tr><th>Metric</th><th>Value</th></tr>"
+        f"<tr><td>👥 Merchants</td><td>{connected_merchants} active / {total_merchants} total</td></tr>"
+        f"<tr><td>📝 Intents (Paid)</td><td>{paid_intents} paid / {total_intents} total</td></tr>"
+        f"<tr><td>💰 Processed Payments</td><td>{total_payments}</td></tr>"
+        "</table>"
     )
+    
+    await send_or_edit_rich_message(event, html)
 
 @management_bot.on(events.NewMessage(pattern='/merchants'))
 async def merchants_handler(event):
@@ -181,17 +207,25 @@ async def callback_stats(event):
     paid_intents = db.query(PaymentIntent).filter(PaymentIntent.status == "PAID").count()
     total_payments = db.query(ProcessedPayment).count()
     db.close()
-    table = f"{'Metric':<15} | {'Value':<12}\n"
-    table += "-" * 30 + "\n"
-    table += f"{'Merchants':<15} | {f'{connected_merchants}/{total_merchants}':<12}\n"
-    table += f"{'Invoices(Paid)':<15} | {f'{paid_intents}/{total_intents}':<12}\n"
-    table += f"{'Total Processed':<15} | {total_payments:<12}\n"
     
-    await event.edit(
-        f"<b>🛡️ Admin Stats</b>\n\n<pre>{table}</pre>",
-        parse_mode='html',
-        buttons=[[Button.inline("⬅️ Back", b"admin_back")]]
+    html = (
+        "<table bordered striped>"
+        "<caption><b>🛡️ Admin Stats</b></caption>"
+        "<tr><th>Metric</th><th>Value</th></tr>"
+        f"<tr><td>👥 Merchants</td><td>{connected_merchants} active / {total_merchants} total</td></tr>"
+        f"<tr><td>📝 Intents (Paid)</td><td>{paid_intents} paid / {total_intents} total</td></tr>"
+        f"<tr><td>💰 Processed Payments</td><td>{total_payments}</td></tr>"
+        "</table>"
     )
+    
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
+        ]
+    }
+    
+    await event.answer()
+    await send_or_edit_rich_message(event, html, reply_markup)
 
 @management_bot.on(events.CallbackQuery(pattern=b'admin_merchants'))
 async def callback_merchants(event):
@@ -286,11 +320,12 @@ async def callback_payments_table(event):
     payments = db.query(ProcessedPayment, Merchant).join(Merchant, ProcessedPayment.merchant_id == Merchant.id).order_by(ProcessedPayment.date_received.desc()).offset(offset).limit(per_page).all()
     db.close()
     
-    table = f"{'Date':<5} | {'Phone':<9} | {'Amount':<7} | {'Src':<4}\n"
-    table += "-" * 33 + "\n"
+    html = f"<table bordered striped><caption><b>📊 Payments Database (Page {page+1})</b></caption>"
+    html += "<tr><th>Date</th><th>Phone</th><th>Amount</th><th>Src</th></tr>"
+    
     for p, m in payments:
         date_str = p.date_received.strftime("%m-%d")
-        phone = m.phone_number[-9:] if (m.phone_number and len(m.phone_number) >= 9) else "Unknown  "
+        phone = m.phone_number[-9:] if (m.phone_number and len(m.phone_number) >= 9) else "Unknown"
         amt = p.amount_tiyins / 100
         if amt >= 1000000:
             amt_str = f"{amt/1000000:.1f}M"
@@ -300,24 +335,28 @@ async def callback_payments_table(event):
             amt_str = str(int(amt))
         src = p.source[:4] if p.source else "UNK"
         
-        table += f"{date_str:<5} | {phone:<9} | {amt_str:<7} | {src:<4}\n"
+        html += f"<tr><td>{date_str}</td><td>{phone}</td><td>{amt_str}</td><td>{src}</td></tr>"
         
-    text = f"<b>📊 Payments Database (Page {page+1})</b>\n\n"
+    html += f"</table><p><i>Total records: {total_count}</i></p>"
+    
     if total_count == 0:
-        text += "<i>No payments found.</i>\n"
-    else:
-        text += f"<pre>{table}</pre>\n"
-    text += f"<i>Total records: {total_count}</i>"
+        html = "<p><b>📊 Payments Database</b><br/><i>No payments found.</i></p>"
     
-    nav_buttons = []
+    inline_keyboard = []
+    nav_row = []
     if page > 0:
-        nav_buttons.append(Button.inline("⬅️ Prev", f"admin_payments_{page-1}".encode()))
+        nav_row.append({"text": "⬅️ Prev", "callback_data": f"admin_payments_{page-1}"})
     if offset + per_page < total_count:
-        nav_buttons.append(Button.inline("Next ➡️", f"admin_payments_{page+1}".encode()))
+        nav_row.append({"text": "Next ➡️", "callback_data": f"admin_payments_{page+1}"})
         
-    buttons = [nav_buttons, [Button.inline("⬅️ Back to Admin Panel", b"admin_back")]] if nav_buttons else [[Button.inline("⬅️ Back to Admin Panel", b"admin_back")]]
+    if nav_row:
+        inline_keyboard.append(nav_row)
+    inline_keyboard.append([{"text": "⬅️ Back to Admin Panel", "callback_data": "admin_back"}])
     
-    await event.edit(text, parse_mode='html', buttons=buttons)
+    reply_markup = {"inline_keyboard": inline_keyboard}
+    
+    await event.answer()
+    await send_or_edit_rich_message(event, html, reply_markup)
 
 @management_bot.on(events.CallbackQuery(pattern=b'admin_back'))
 async def callback_back(event):
