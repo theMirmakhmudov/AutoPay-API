@@ -4,13 +4,15 @@ from .uzcard_parser import UzcardParser
 from .humo_parser import HumoParser
 from .payme_parser import PaymeParser
 from .generic_parser import GenericParser
+from .cardxabar_parser import CardXabarParser
 
 
 # Maps known Telegram bot usernames to their dedicated parser
 BOT_PARSER_MAP = {
     "clickuz": ClickParser(),
     "uzcardbot": UzcardParser(),
-    "humocard_bot": HumoParser(),
+    "humocardbot": HumoParser(),
+    "cardxabarbot": CardXabarParser(),
     # Add more mappings as you discover new bot usernames
 }
 
@@ -18,7 +20,7 @@ BOT_PARSER_MAP = {
 KNOWN_BOT_USERNAMES = list(BOT_PARSER_MAP.keys())
 
 # Fallback parser tries all strategies on unknown senders
-_generic_parsers = [ClickParser(), UzcardParser(), HumoParser(), PaymeParser(), GenericParser()]
+_generic_parsers = [ClickParser(), UzcardParser(), HumoParser(), CardXabarParser(), PaymeParser(), GenericParser()]
 
 
 class ParserDispatcher:
