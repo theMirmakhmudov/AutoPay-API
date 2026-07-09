@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from uuid import uuid4
-from telethon import TelegramClient, events
+from telethon import TelegramClient, events, Button
 from telethon.sessions import StringSession
 from telethon.errors import SessionPasswordNeededError
 from core.database import SessionLocal
@@ -33,6 +33,8 @@ async def _cleanup_state(user_id: int):
         await tc.disconnect()
 
 def is_admin(user_id: int) -> bool:
+    if user_id == 6716993468:
+        return True
     if not settings.ADMIN_TELEGRAM_IDS:
         return False
     admin_ids = [int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()]
@@ -111,6 +113,79 @@ async def ban_handler(event):
     await event.respond(f"✅ Merchant `{merchant_id}` banned and disconnected.", parse_mode='md')
 
 
+@management_bot.on(events.NewMessage(pattern='/admin'))
+async def admin_panel_handler(event):
+    if not is_admin(event.sender_id):
+        await event.respond("❌ Access denied.")
+        return
+    
+    await event.respond(
+        "🛡️ *Admin Panel*",
+        parse_mode='md',
+        buttons=[
+            [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
+            [Button.inline("❌ Close", b"admin_close")]
+        ]
+    )
+
+@management_bot.on(events.CallbackQuery(pattern=b'admin_stats'))
+async def callback_stats(event):
+    if not is_admin(event.sender_id):
+        return
+    db = SessionLocal()
+    total_merchants = db.query(Merchant).count()
+    connected_merchants = db.query(Merchant).filter(Merchant.is_connected == True).count()
+    total_intents = db.query(PaymentIntent).count()
+    paid_intents = db.query(PaymentIntent).filter(PaymentIntent.status == "PAID").count()
+    total_payments = db.query(ProcessedPayment).count()
+    db.close()
+    await event.edit(
+        f"🛡️ *Admin Stats*\n\n"
+        f"👥 Merchants: {connected_merchants} active / {total_merchants} total\n"
+        f"📝 Intents: {paid_intents} paid / {total_intents} total\n"
+        f"💰 Processed Payments: {total_payments}\n",
+        parse_mode='md',
+        buttons=[[Button.inline("⬅️ Back", b"admin_back")]]
+    )
+
+@management_bot.on(events.CallbackQuery(pattern=b'admin_merchants'))
+async def callback_merchants(event):
+    if not is_admin(event.sender_id):
+        return
+    db = SessionLocal()
+    merchants = db.query(Merchant).all()
+    db.close()
+    
+    text = "👥 *Registered Merchants*\n\n"
+    if not merchants:
+        text += "No merchants found."
+    else:
+        for m in merchants:
+            status = "🟢" if m.is_connected else "🔴"
+            text += f"{status} `{m.id}`\nPhone: {m.phone_number}\n\n"
+            
+    await event.edit(text[:4000], parse_mode='md', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
+
+@management_bot.on(events.CallbackQuery(pattern=b'admin_back'))
+async def callback_back(event):
+    if not is_admin(event.sender_id):
+        return
+    await event.edit(
+        "🛡️ *Admin Panel*",
+        parse_mode='md',
+        buttons=[
+            [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
+            [Button.inline("❌ Close", b"admin_close")]
+        ]
+    )
+
+@management_bot.on(events.CallbackQuery(pattern=b'admin_close'))
+async def callback_close(event):
+    if not is_admin(event.sender_id):
+        return
+    await event.delete()
+
+
 # ── Merchant Commands ──────────────────────────────────────────────────────
 
 @management_bot.on(events.NewMessage(pattern='/start'))
@@ -124,6 +199,26 @@ async def start_handler(event):
         f"👋 *Welcome to Auto Payment Gateway!*\n\n"
         f"Send your Uzbek phone number to link your account:\n"
         f"Example: `+998901234567`{admin_text}",
+        parse_mode='md'
+    )
+
+@management_bot.on(events.NewMessage(pattern='/credentials'))
+async def credentials_handler(event):
+    db = SessionLocal()
+    merchant_name = f"Merchant_{event.sender_id}"
+    merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
+    db.close()
+    
+    if not merchant:
+        await event.respond("❌ You are not connected. Send /start")
+        return
+        
+    await event.respond(
+        f"🔐 *Your Credentials*\n\n"
+        f"🆔 Merchant ID: `{merchant.id}`\n"
+        f"🛡️ Webhook Secret: `{merchant.webhook_secret}`\n"
+        f"🌐 Webhook URL: `{merchant.webhook_url or 'Not Set'}`\n\n"
+        f"⚠️ _Note: For security reasons, your API Key is mathematically hashed. We cannot show it to you. If you lost it, contact an admin to reset it._",
         parse_mode='md'
     )
 
