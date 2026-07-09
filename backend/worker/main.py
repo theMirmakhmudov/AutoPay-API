@@ -1,0 +1,68 @@
+import asyncio
+import logging
+from services.payment_service import fire_webhook_with_retry
+from worker.bot import management_bot, BOT_TOKEN, API_ID, API_HASH, set_client_manager
+from worker.client_manager import ClientManager
+import os
+import sentry_sdk
+
+sentry_dsn = os.getenv("SENTRY_DSN")
+if sentry_dsn:
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        traces_sample_rate=1.0,
+    )
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+async def cleanup_expired_intents():
+    """
+    Fix #3 + Background cleanup: Run every 60s to expire old PaymentIntents.
+    Started AFTER the event loop is confirmed running.
+    """
+    from core.database import SessionLocal
+    from repositories.payment_repo import PaymentRepository
+
+    while True:
+        await asyncio.sleep(60)  # Wait first so loop is fully running
+        try:
+            db = SessionLocal()
+            repo = PaymentRepository(db)
+            count = repo.expire_old_intents()
+            if count:
+                logger.info(f"Expired {count} stale payment intent(s)")
+            db.close()
+        except Exception as e:
+            logger.error(f"Cleanup task error: {e}")
+
+async def main():
+    logger.info("Starting Managed Telethon Worker Service...")
+
+    # Database is now managed via Alembic migrations.
+
+    if not BOT_TOKEN:
+        logger.error("No MANAGEMENT_BOT_TOKEN provided!")
+        return
+
+    # 1. Start the management bot
+    await management_bot.start(bot_token=BOT_TOKEN)
+    logger.info("✅ Management Bot online")
+
+    # Fix #3: Create tasks AFTER the loop is running (inside async context)
+    asyncio.get_event_loop().create_task(cleanup_expired_intents())
+
+    # 2. Start the Session Manager and inject it into bot for hot-reloading (Fix #4)
+    manager = ClientManager(API_ID, API_HASH)
+    set_client_manager(manager)  # bot.py can now call manager.start_client()
+    await manager.start_all_clients()
+    logger.info("✅ All merchant userbots connected")
+
+    # 3. Run indefinitely
+    await management_bot.run_until_disconnected()
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,0 +1,40 @@
+name: Deploy API
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      - name: Copy Files to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 100.64.3.36
+          username: multi
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: "."
+          target: "~/AvtoPaymentBot"
+
+      - name: Restart Docker Containers
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 100.64.3.36
+          username: multi
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd ~/AvtoPaymentBot/backend
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S sh -c 'docker ps -a | grep backend | awk "{print \$1}" | xargs -r docker rm -f' || true
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S sh -c 'docker ps -a | grep autopay | awk "{print \$1}" | xargs -r docker rm -f' || true
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S docker-compose up --build -d

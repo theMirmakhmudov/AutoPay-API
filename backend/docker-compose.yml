@@ -1,0 +1,95 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: autopay_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: autopay
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: autopay_api
+    command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - .:/app
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@db:5432/autopay
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: autopay_worker
+    command: python -m worker.main
+    volumes:
+      - .:/app
+      # Map telethon session files if they are generated locally, but we are using string sessions in the DB now!
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@db:5432/autopay
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: autopay_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: autopay_tunnel
+    restart: always
+    command: tunnel run
+    volumes:
+      - ./tunnel.json:/etc/cloudflared/cert.json
+      - ./config.yml:/etc/cloudflared/config.yml
+    depends_on:
+      - nginx
+
+  db-backup:
+    image: prodrigestivill/postgres-backup-local
+    container_name: autopay_db_backup
+    restart: always
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=autopay
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password123
+      - SCHEDULE=0 2 * * *
+      - BACKUP_KEEP_DAYS=7
+      - BACKUP_KEEP_WEEKS=4
+      - BACKUP_KEEP_MONTHS=6
+      - HEALTHCHECK_PORT=8080
+
+volumes:
+  postgres_data:
