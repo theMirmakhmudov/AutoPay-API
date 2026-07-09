@@ -118,14 +118,6 @@ async def ban_handler(event):
 @management_bot.on(events.NewMessage(pattern='/start'))
 async def start_handler(event):
     await _cleanup_state(event.sender_id)
-    user_states[event.sender_id] = {"state": "AWAITING_PHONE"}
-    
-    await event.respond(
-        f"<b>👋 Welcome to Auto Payment Gateway!</b>\n\n"
-        f"Send your Uzbek phone number to link your account:\n"
-        f"Example: <code>+998901234567</code>",
-        parse_mode='html'
-    )
     
     if is_admin(event.sender_id):
         await event.respond(
@@ -135,6 +127,14 @@ async def start_handler(event):
                 [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
                 [Button.inline("❌ Close", b"admin_close")]
             ]
+        )
+    else:
+        user_states[event.sender_id] = {"state": "AWAITING_PHONE"}
+        await event.respond(
+            f"<b>👋 Welcome to Auto Payment Gateway!</b>\n\n"
+            f"Send your Uzbek phone number to link your account:\n"
+            f"Example: <code>+998901234567</code>",
+            parse_mode='html'
         )
 async def callback_stats(event):
     if not is_admin(event.sender_id):
