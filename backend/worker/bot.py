@@ -60,12 +60,14 @@ async def stats_handler(event):
     
     total_payments = db.query(ProcessedPayment).count()
     db.close()
+    table = f"{'Metric':<15} | {'Value':<12}\n"
+    table += "-" * 30 + "\n"
+    table += f"{'Merchants':<15} | {f'{connected_merchants}/{total_merchants}':<12}\n"
+    table += f"{'Invoices(Paid)':<15} | {f'{paid_intents}/{total_intents}':<12}\n"
+    table += f"{'Total Processed':<15} | {total_payments:<12}\n"
     
     await event.respond(
-        f"<b>🛡️ Admin Stats</b>\n\n"
-        f"<b>👥 Merchants:</b> {connected_merchants} active / {total_merchants} total\n"
-        f"<b>📝 Intents:</b> {paid_intents} paid / {total_intents} total\n"
-        f"<b>💰 Processed Payments:</b> {total_payments}\n",
+        f"<b>🛡️ Admin Stats</b>\n\n<pre>{table}</pre>",
         parse_mode='html'
     )
 
@@ -153,11 +155,14 @@ async def callback_stats(event):
     paid_intents = db.query(PaymentIntent).filter(PaymentIntent.status == "PAID").count()
     total_payments = db.query(ProcessedPayment).count()
     db.close()
+    table = f"{'Metric':<15} | {'Value':<12}\n"
+    table += "-" * 30 + "\n"
+    table += f"{'Merchants':<15} | {f'{connected_merchants}/{total_merchants}':<12}\n"
+    table += f"{'Invoices(Paid)':<15} | {f'{paid_intents}/{total_intents}':<12}\n"
+    table += f"{'Total Processed':<15} | {total_payments:<12}\n"
+    
     await event.edit(
-        f"<b>🛡️ Admin Stats</b>\n\n"
-        f"<b>👥 Merchants:</b> {connected_merchants} active / {total_merchants} total\n"
-        f"<b>📝 Intents:</b> {paid_intents} paid / {total_intents} total\n"
-        f"<b>💰 Processed Payments:</b> {total_payments}\n",
+        f"<b>🛡️ Admin Stats</b>\n\n<pre>{table}</pre>",
         parse_mode='html',
         buttons=[[Button.inline("⬅️ Back", b"admin_back")]]
     )
