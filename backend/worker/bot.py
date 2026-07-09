@@ -125,6 +125,32 @@ async def start_handler(event):
     await _cleanup_state(event.sender_id)
     
     if is_admin(event.sender_id):
+        # Dynamically inject the Admin-only commands menu for this specific admin
+        try:
+            from telethon.tl.functions.bots import SetBotCommandsRequest
+            from telethon.tl.types import BotCommand, BotCommandScopePeer
+            user_cmds = [
+                BotCommand(command="start", description="Start the bot and link account"),
+                BotCommand(command="credentials", description="View your Merchant ID and Secrets"),
+                BotCommand(command="status", description="Check connection status"),
+                BotCommand(command="create", description="Generate a payment intent"),
+                BotCommand(command="setwebhook", description="Set webhook URL"),
+                BotCommand(command="disconnect", description="Disconnect your Telegram account")
+            ]
+            admin_cmds = [
+                BotCommand(command="start", description="Open Admin Control Panel"),
+                BotCommand(command="stats", description="View system statistics"),
+                BotCommand(command="merchants", description="List all connected merchants"),
+                BotCommand(command="ban", description="Ban a merchant")
+            ]
+            await management_bot(SetBotCommandsRequest(
+                scope=BotCommandScopePeer(event.input_sender),
+                lang_code='',
+                commands=admin_cmds + user_cmds
+            ))
+        except Exception as e:
+            logger.error(f"Failed to set admin commands menu: {e}")
+            
         await event.respond(
             "<b>🛡️ Admin Control Panel</b>",
             parse_mode='html',

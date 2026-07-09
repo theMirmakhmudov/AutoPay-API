@@ -71,12 +71,6 @@ async def main():
             BotCommand(command="ban", description="Ban a merchant")
         ]
         await management_bot(SetBotCommandsRequest(scope=BotCommandScopeDefault(), lang_code='', commands=user_cmds))
-        
-        try:
-            admin_peer = await management_bot.get_input_entity(6716993468)
-            await management_bot(SetBotCommandsRequest(scope=BotCommandScopePeer(admin_peer), lang_code='', commands=admin_cmds + user_cmds))
-        except Exception as e:
-            logger.warning(f"Could not set admin commands for 6716993468: {e}")
     except Exception as e:
         logger.error(f"Failed to set bot commands: {e}")
 
