@@ -3,6 +3,8 @@ import logging
 from services.payment_service import fire_webhook_with_retry
 from worker.bot import management_bot, BOT_TOKEN, API_ID, API_HASH, set_client_manager
 from worker.client_manager import ClientManager
+from telethon.tl.functions.bots import SetBotCommandsRequest
+from telethon.tl.types import BotCommand, BotCommandScopeDefault, BotCommandScopePeer
 import os
 import sentry_sdk
 
@@ -51,6 +53,32 @@ async def main():
     # 1. Start the management bot
     await management_bot.start(bot_token=BOT_TOKEN)
     logger.info("✅ Management Bot online")
+
+    # Setup Bot Commands Menu
+    try:
+        user_cmds = [
+            BotCommand(command="start", description="Start the bot and link account"),
+            BotCommand(command="credentials", description="View your Merchant ID and Secrets"),
+            BotCommand(command="status", description="Check connection status"),
+            BotCommand(command="create", description="Generate a payment intent"),
+            BotCommand(command="setwebhook", description="Set webhook URL"),
+            BotCommand(command="disconnect", description="Disconnect your Telegram account")
+        ]
+        admin_cmds = [
+            BotCommand(command="start", description="Open Admin Control Panel"),
+            BotCommand(command="stats", description="View system statistics"),
+            BotCommand(command="merchants", description="List all connected merchants"),
+            BotCommand(command="ban", description="Ban a merchant")
+        ]
+        await management_bot(SetBotCommandsRequest(scope=BotCommandScopeDefault(), lang_code='', commands=user_cmds))
+        
+        try:
+            admin_peer = await management_bot.get_input_entity(6716993468)
+            await management_bot(SetBotCommandsRequest(scope=BotCommandScopePeer(admin_peer), lang_code='', commands=admin_cmds + user_cmds))
+        except Exception as e:
+            logger.warning(f"Could not set admin commands for 6716993468: {e}")
+    except Exception as e:
+        logger.error(f"Failed to set bot commands: {e}")
 
     # Fix #3: Create tasks AFTER the loop is running (inside async context)
     asyncio.get_event_loop().create_task(cleanup_expired_intents())
