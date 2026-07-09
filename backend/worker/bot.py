@@ -59,11 +59,11 @@ async def stats_handler(event):
     db.close()
     
     await event.respond(
-        f"🛡️ *Admin Stats*\n\n"
-        f"👥 Merchants: {connected_merchants} active / {total_merchants} total\n"
-        f"📝 Intents: {paid_intents} paid / {total_intents} total\n"
-        f"💰 Processed Payments: {total_payments}\n",
-        parse_mode='md'
+        f"<b>🛡️ Admin Stats</b>\n\n"
+        f"<b>👥 Merchants:</b> {connected_merchants} active / {total_merchants} total\n"
+        f"<b>📝 Intents:</b> {paid_intents} paid / {total_intents} total\n"
+        f"<b>💰 Processed Payments:</b> {total_payments}\n",
+        parse_mode='html'
     )
 
 @management_bot.on(events.NewMessage(pattern='/merchants'))
@@ -80,12 +80,12 @@ async def merchants_handler(event):
         await event.respond("No merchants found.")
         return
         
-    text = "👥 *Registered Merchants*\n\n"
+    text = "<b>👥 Registered Merchants</b>\n\n"
     for m in merchants:
         status = "🟢" if m.is_connected else "🔴"
-        text += f"{status} `{m.id}`\nPhone: {m.phone_number}\n\n"
+        text += f"{status} <code>{m.id}</code>\n<b>Phone:</b> {m.phone_number}\n\n"
         
-    await event.respond(text[:4000], parse_mode='md')
+    await event.respond(text[:4000], parse_mode='html')
 
 @management_bot.on(events.NewMessage(pattern=r'/ban (.+)'))
 async def ban_handler(event):
@@ -110,7 +110,7 @@ async def ban_handler(event):
     if _client_manager:
         await _client_manager.stop_client(merchant_id)
         
-    await event.respond(f"✅ Merchant `{merchant_id}` banned and disconnected.", parse_mode='md')
+    await event.respond(f"✅ Merchant <code>{merchant_id}</code> banned and disconnected.", parse_mode='html')
 
 
 @management_bot.on(events.NewMessage(pattern='/admin'))
@@ -120,8 +120,8 @@ async def admin_panel_handler(event):
         return
     
     await event.respond(
-        "🛡️ *Admin Panel*",
-        parse_mode='md',
+        "<b>🛡️ Admin Panel</b>",
+        parse_mode='html',
         buttons=[
             [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
             [Button.inline("❌ Close", b"admin_close")]
@@ -140,11 +140,11 @@ async def callback_stats(event):
     total_payments = db.query(ProcessedPayment).count()
     db.close()
     await event.edit(
-        f"🛡️ *Admin Stats*\n\n"
-        f"👥 Merchants: {connected_merchants} active / {total_merchants} total\n"
-        f"📝 Intents: {paid_intents} paid / {total_intents} total\n"
-        f"💰 Processed Payments: {total_payments}\n",
-        parse_mode='md',
+        f"<b>🛡️ Admin Stats</b>\n\n"
+        f"<b>👥 Merchants:</b> {connected_merchants} active / {total_merchants} total\n"
+        f"<b>📝 Intents:</b> {paid_intents} paid / {total_intents} total\n"
+        f"<b>💰 Processed Payments:</b> {total_payments}\n",
+        parse_mode='html',
         buttons=[[Button.inline("⬅️ Back", b"admin_back")]]
     )
 
@@ -156,23 +156,23 @@ async def callback_merchants(event):
     merchants = db.query(Merchant).all()
     db.close()
     
-    text = "👥 *Registered Merchants*\n\n"
+    text = "<b>👥 Registered Merchants</b>\n\n"
     if not merchants:
         text += "No merchants found."
     else:
         for m in merchants:
             status = "🟢" if m.is_connected else "🔴"
-            text += f"{status} `{m.id}`\nPhone: {m.phone_number}\n\n"
+            text += f"{status} <code>{m.id}</code>\n<b>Phone:</b> {m.phone_number}\n\n"
             
-    await event.edit(text[:4000], parse_mode='md', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
+    await event.edit(text[:4000], parse_mode='html', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
 
 @management_bot.on(events.CallbackQuery(pattern=b'admin_back'))
 async def callback_back(event):
     if not is_admin(event.sender_id):
         return
     await event.edit(
-        "🛡️ *Admin Panel*",
-        parse_mode='md',
+        "<b>🛡️ Admin Panel</b>",
+        parse_mode='html',
         buttons=[
             [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
             [Button.inline("❌ Close", b"admin_close")]
@@ -193,13 +193,13 @@ async def start_handler(event):
     await _cleanup_state(event.sender_id)
     user_states[event.sender_id] = {"state": "AWAITING_PHONE"}
     
-    admin_text = "\n\n🛡️ *Admin Commands:*\n`/stats`, `/merchants`, `/ban <id>`" if is_admin(event.sender_id) else ""
+    admin_text = "\n\n<b>🛡️ Admin Commands:</b>\n<code>/stats</code>, <code>/merchants</code>, <code>/ban &lt;id&gt;</code>" if is_admin(event.sender_id) else ""
     
     await event.respond(
-        f"👋 *Welcome to Auto Payment Gateway!*\n\n"
+        f"<b>👋 Welcome to Auto Payment Gateway!</b>\n\n"
         f"Send your Uzbek phone number to link your account:\n"
-        f"Example: `+998901234567`{admin_text}",
-        parse_mode='md'
+        f"Example: <code>+998901234567</code>{admin_text}",
+        parse_mode='html'
     )
 
 @management_bot.on(events.NewMessage(pattern='/credentials'))
@@ -214,12 +214,12 @@ async def credentials_handler(event):
         return
         
     await event.respond(
-        f"🔐 *Your Credentials*\n\n"
-        f"🆔 Merchant ID: `{merchant.id}`\n"
-        f"🛡️ Webhook Secret: `{merchant.webhook_secret}`\n"
-        f"🌐 Webhook URL: `{merchant.webhook_url or 'Not Set'}`\n\n"
-        f"⚠️ _Note: For security reasons, your API Key is mathematically hashed. We cannot show it to you. If you lost it, contact an admin to reset it._",
-        parse_mode='md'
+        f"<b>🔐 Your Credentials</b>\n\n"
+        f"<b>🆔 Merchant ID:</b> <code>{merchant.id}</code>\n"
+        f"<b>🛡️ Webhook Secret:</b> <code>{merchant.webhook_secret}</code>\n"
+        f"<b>🌐 Webhook URL:</b> <code>{merchant.webhook_url or 'Not Set'}</code>\n\n"
+        f"⚠️ <i>Note: For security reasons, your API Key is mathematically hashed. We cannot show it to you. If you lost it, contact an admin to reset it.</i>",
+        parse_mode='html'
     )
 
 @management_bot.on(events.NewMessage(pattern='/status'))
@@ -255,11 +255,11 @@ async def create_payment_handler(event):
         display_amount = f"{intent.expected_amount / 100:,.2f} UZS"
         
         await event.respond(
-            f"💰 *Payment Intent Created*\n\n"
+            f"<b>💰 Payment Intent Created</b>\n\n"
             f"Forward this to your customer:\n"
-            f"`Please pay exactly {display_amount} to card 8600...`\n\n"
+            f"<code>Please pay exactly {display_amount} to card 8600...</code>\n\n"
             f"Wait for the confirmation message here when paid.",
-            parse_mode='md'
+            parse_mode='html'
         )
     except Exception as e:
         logger.error(f"Failed to create intent: {e}")
@@ -279,7 +279,7 @@ async def setwebhook_handler(event):
     if merchant:
         merchant.webhook_url = url
         db.commit()
-        await event.respond(f"✅ Webhook URL set to: `{url}`", parse_mode='md')
+        await event.respond(f"✅ Webhook URL set to: <code>{url}</code>", parse_mode='html')
     else:
         await event.respond("❌ Merchant not found.")
     db.close()
@@ -316,7 +316,7 @@ async def message_handler(event):
 
     if current_state == "AWAITING_PHONE":
         if not text.startswith("+") or len(text) < 10:
-            await event.respond("Please send a valid phone number (e.g. `+998901234567`)", parse_mode='md')
+            await event.respond("Please send a valid phone number (e.g. <code>+998901234567</code>)", parse_mode='html')
             return
 
         await event.respond("⏳ Sending Telegram login code...")
@@ -332,9 +332,9 @@ async def message_handler(event):
                 "state": "AWAITING_CODE"
             })
             await event.respond(
-                "📩 Code sent! Reply with:\n`CODE 12345`\n\n"
+                "📩 Code sent! Reply with:\n<code>CODE 12345</code>\n\n"
                 "(Prefix with CODE so Telegram doesn't intercept it)",
-                parse_mode='md'
+                parse_mode='html'
             )
         except Exception as e:
             logger.error(f"send_code_request failed: {e}")
@@ -343,7 +343,7 @@ async def message_handler(event):
 
     elif current_state == "AWAITING_CODE":
         if not text.upper().startswith("CODE "):
-            await event.respond("Please reply with the code in format: `CODE 12345`", parse_mode='md')
+            await event.respond("Please reply with the code in format: <code>CODE 12345</code>", parse_mode='html')
             return
 
         code = text.split(" ", 1)[1].strip()
@@ -358,9 +358,9 @@ async def message_handler(event):
         except SessionPasswordNeededError:
             state_data["state"] = "AWAITING_2FA"
             await event.respond(
-                "🔐 Your account has *Two-Step Verification* enabled.\n"
+                "🔐 Your account has <b>Two-Step Verification</b> enabled.\n"
                 "Please send your Telegram password now:",
-                parse_mode='md'
+                parse_mode='html'
             )
         except Exception as e:
             logger.error(f"sign_in failed: {e}")
@@ -408,11 +408,11 @@ async def _finish_login(event, temp_client: TelegramClient, phone: str, user_id:
         logger.info(f"Hot-loaded userbot for new merchant {new_merchant.id}")
 
     await event.respond(
-        f"✅ *Account linked!*\n\n"
-        f"🆔 Merchant ID: `{new_merchant.id}`\n"
-        f"🔑 API Key: `{raw_api_key}`\n"
-        f"🛡️ Webhook Secret: `{webhook_secret}`\n\n"
-        f"⚠️ *Save these secrets now — they will never be shown again!*\n"
-        f"You can now use `/create 35000` to test a payment.",
-        parse_mode='md'
+        f"<b>✅ Account linked!</b>\n\n"
+        f"<b>🆔 Merchant ID:</b> <code>{new_merchant.id}</code>\n"
+        f"<b>🔑 API Key:</b> <code>{raw_api_key}</code>\n"
+        f"<b>🛡️ Webhook Secret:</b> <code>{webhook_secret}</code>\n\n"
+        f"⚠️ <b>Save these secrets now — they will never be shown again!</b>\n"
+        f"You can now use <code>/create 35000</code> to test a payment.",
+        parse_mode='html'
     )
