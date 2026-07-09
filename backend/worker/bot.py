@@ -1,13 +1,14 @@
 import asyncio
 import logging
 from uuid import uuid4
+from sqlalchemy import func
 from telethon import TelegramClient, events, Button
 from telethon.sessions import StringSession
 from telethon.errors import SessionPasswordNeededError
 from core.database import SessionLocal
 from core.config import settings
 from core.encryption import encrypt_session, generate_api_key, generate_webhook_secret
-from models.payment import Merchant, PaymentIntent, ProcessedPayment
+from models.payment import Merchant, PaymentIntent, ProcessedPayment, UnparsedMessage
 from services.payment_service import PaymentService
 from schemas.payload import CreatePaymentRequest
 
@@ -125,6 +126,8 @@ async def start_handler(event):
             parse_mode='html',
             buttons=[
                 [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
+                [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
+                [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
                 [Button.inline("❌ Close", b"admin_close")]
             ]
         )
@@ -173,7 +176,67 @@ async def callback_merchants(event):
             
     await event.edit(text[:4000], parse_mode='html', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_stats'))
+@management_bot.on(events.CallbackQuery(pattern=b'admin_revenue'))
+async def callback_revenue(event):
+    if not is_admin(event.sender_id):
+        return
+    db = SessionLocal()
+    revenue_tiyins = db.query(func.sum(PaymentIntent.expected_amount_tiyins)).filter(PaymentIntent.status == "PAID").scalar() or 0
+    total_revenue = revenue_tiyins / 100
+    db.close()
+    
+    await event.edit(
+        f"<b>💰 Revenue Tracker</b>\n\n"
+        f"<b>Total Volume Processed:</b> {total_revenue:,.2f} UZS\n\n"
+        f"<i>(This is the sum of all successfully paid payment intents)</i>",
+        parse_mode='html',
+        buttons=[[Button.inline("⬅️ Back", b"admin_back")]]
+    )
+
+@management_bot.on(events.CallbackQuery(pattern=b'admin_recent'))
+async def callback_recent(event):
+    if not is_admin(event.sender_id):
+        return
+    db = SessionLocal()
+    recent = db.query(ProcessedPayment).order_by(ProcessedPayment.date_received.desc()).limit(5).all()
+    db.close()
+    
+    text = "<b>📈 Recent Transactions</b>\n\n"
+    if not recent:
+        text += "No transactions yet."
+    for r in recent:
+        amount = r.amount_tiyins / 100
+        text += f"▪️ <b>{amount:,.2f} UZS</b> via {r.source}\n   Date: {r.date_received.strftime('%Y-%m-%d %H:%M')}\n   Status: {r.status}\n\n"
+        
+    await event.edit(text[:4000], parse_mode='html', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
+
+@management_bot.on(events.CallbackQuery(pattern=b'admin_errors'))
+async def callback_errors(event):
+    if not is_admin(event.sender_id):
+        return
+    db = SessionLocal()
+    errors = db.query(UnparsedMessage).filter(UnparsedMessage.is_resolved == False).order_by(UnparsedMessage.date_received.desc()).limit(5).all()
+    db.close()
+    
+    text = "<b>⚠️ Recent Unparsed Messages (Dead Letter Queue)</b>\n\n"
+    if not errors:
+        text += "✅ All systems normal. No recent parsing errors."
+    for e in errors:
+        text += f"▪️ <b>Error:</b> {e.error_reason}\n   <b>Date:</b> {e.date_received.strftime('%Y-%m-%d %H:%M')}\n   <code>{e.raw_text[:50]}...</code>\n\n"
+        
+    await event.edit(text[:4000], parse_mode='html', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
+
+@management_bot.on(events.CallbackQuery(pattern=b'admin_broadcast'))
+async def callback_broadcast(event):
+    if not is_admin(event.sender_id):
+        return
+    user_states[event.sender_id] = {"state": "AWAITING_BROADCAST"}
+    await event.edit(
+        "<b>📢 Broadcast Mode Activated</b>\n\n"
+        "Send the message you want to broadcast to ALL merchants now. (Or click Back to cancel)",
+        parse_mode='html',
+        buttons=[[Button.inline("⬅️ Cancel", b"admin_back")]]
+    )
 
 @management_bot.on(events.CallbackQuery(pattern=b'admin_back'))
 async def callback_back(event):
@@ -184,6 +247,8 @@ async def callback_back(event):
         parse_mode='html',
         buttons=[
             [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
+            [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
+            [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
             [Button.inline("❌ Close", b"admin_close")]
         ]
     )
@@ -306,6 +371,34 @@ async def message_handler(event):
 
     state_data = user_states[user_id]
     current_state = state_data.get("state")
+
+    if current_state == "AWAITING_BROADCAST":
+        if not text:
+            await event.respond("❌ Broadcast message cannot be empty.")
+            return
+            
+        await event.respond("⏳ Broadcasting to all merchants...")
+        db = SessionLocal()
+        merchants = db.query(Merchant).all()
+        db.close()
+        
+        success_count = 0
+        for m in merchants:
+            try:
+                if m.name.startswith("Merchant_"):
+                    m_id = int(m.name.split("_")[1])
+                    await management_bot.send_message(
+                        m_id, 
+                        f"📢 <b>Announcement from Admin</b>\n\n{text}",
+                        parse_mode='html'
+                    )
+                    success_count += 1
+            except Exception as e:
+                logger.error(f"Failed to broadcast to {m.name}: {e}")
+                
+        user_states.pop(user_id, None)
+        await event.respond(f"✅ Broadcast sent successfully to {success_count} merchants.")
+        return
 
     if current_state == "AWAITING_PHONE":
         if not text.startswith("+") or len(text) < 10:
