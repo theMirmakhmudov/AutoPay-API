@@ -113,22 +113,29 @@ async def ban_handler(event):
     await event.respond(f"✅ Merchant <code>{merchant_id}</code> banned and disconnected.", parse_mode='html')
 
 
-@management_bot.on(events.NewMessage(pattern='/admin'))
-async def admin_panel_handler(event):
-    if not is_admin(event.sender_id):
-        await event.respond("❌ Access denied.")
-        return
+# ── Merchant Commands ──────────────────────────────────────────────────────
+
+@management_bot.on(events.NewMessage(pattern='/start'))
+async def start_handler(event):
+    await _cleanup_state(event.sender_id)
+    user_states[event.sender_id] = {"state": "AWAITING_PHONE"}
     
     await event.respond(
-        "<b>🛡️ Admin Panel</b>",
-        parse_mode='html',
-        buttons=[
-            [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
-            [Button.inline("❌ Close", b"admin_close")]
-        ]
+        f"<b>👋 Welcome to Auto Payment Gateway!</b>\n\n"
+        f"Send your Uzbek phone number to link your account:\n"
+        f"Example: <code>+998901234567</code>",
+        parse_mode='html'
     )
-
-@management_bot.on(events.CallbackQuery(pattern=b'admin_stats'))
+    
+    if is_admin(event.sender_id):
+        await event.respond(
+            "<b>🛡️ Admin Control Panel</b>",
+            parse_mode='html',
+            buttons=[
+                [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
+                [Button.inline("❌ Close", b"admin_close")]
+            ]
+        )
 async def callback_stats(event):
     if not is_admin(event.sender_id):
         return
@@ -166,12 +173,14 @@ async def callback_merchants(event):
             
     await event.edit(text[:4000], parse_mode='html', buttons=[[Button.inline("⬅️ Back", b"admin_back")]])
 
+@management_bot.on(events.CallbackQuery(pattern=b'admin_stats'))
+
 @management_bot.on(events.CallbackQuery(pattern=b'admin_back'))
 async def callback_back(event):
     if not is_admin(event.sender_id):
         return
     await event.edit(
-        "<b>🛡️ Admin Panel</b>",
+        "<b>🛡️ Admin Control Panel</b>",
         parse_mode='html',
         buttons=[
             [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
@@ -185,22 +194,6 @@ async def callback_close(event):
         return
     await event.delete()
 
-
-# ── Merchant Commands ──────────────────────────────────────────────────────
-
-@management_bot.on(events.NewMessage(pattern='/start'))
-async def start_handler(event):
-    await _cleanup_state(event.sender_id)
-    user_states[event.sender_id] = {"state": "AWAITING_PHONE"}
-    
-    admin_text = "\n\n<b>🛡️ Admin Commands:</b>\n<code>/stats</code>, <code>/merchants</code>, <code>/ban &lt;id&gt;</code>" if is_admin(event.sender_id) else ""
-    
-    await event.respond(
-        f"<b>👋 Welcome to Auto Payment Gateway!</b>\n\n"
-        f"Send your Uzbek phone number to link your account:\n"
-        f"Example: <code>+998901234567</code>{admin_text}",
-        parse_mode='html'
-    )
 
 @management_bot.on(events.NewMessage(pattern='/credentials'))
 async def credentials_handler(event):
