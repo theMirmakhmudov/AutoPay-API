@@ -3,7 +3,7 @@ import secrets
 
 from cryptography.fernet import Fernet
 
-from core.config import settings
+from autopay.core.config import settings
 
 # ── Session String Encryption ────────────────────────────────────────────────
 # The ENCRYPTION_KEY in .env is a Fernet key. Session strings are encrypted

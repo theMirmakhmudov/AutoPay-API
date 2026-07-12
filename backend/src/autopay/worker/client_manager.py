@@ -4,14 +4,14 @@ from typing import Dict
 
 from telethon import TelegramClient, events, errors
 from telethon.sessions import StringSession
-from core.config import settings
+from autopay.core.config import settings
 
-from core.database import SessionLocal
-from core.encryption import decrypt_session
-from models.payment import Merchant
-from schemas.payload import TelegramWebhookPayload
-from services.parsers.dispatcher import KNOWN_BOT_USERNAMES
-from services.payment_service import PaymentService, fire_webhook_with_retry
+from autopay.core.database import SessionLocal
+from autopay.core.encryption import decrypt_session
+from autopay.models.payment import Merchant
+from autopay.schemas.payload import TelegramWebhookPayload
+from autopay.services.parsers.dispatcher import KNOWN_BOT_USERNAMES
+from autopay.services.payment_service import PaymentService, fire_webhook_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ class ClientManager:
 
                 # Notify merchant via Telegram
                 try:
-                    from worker.bot import management_bot
+                    from autopay.worker.bot import management_bot
                     db = SessionLocal()
                     merchant_record = db.query(Merchant).filter(Merchant.id == merchant_id).first()
                     db.close()
@@ -120,7 +120,7 @@ class ClientManager:
 
     async def health_check_clients(self):
         db = SessionLocal()
-        from worker.bot import management_bot
+        from autopay.worker.bot import management_bot
         admin_ids = [int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()]
 
         # We must copy keys because we might modify the dict during iteration

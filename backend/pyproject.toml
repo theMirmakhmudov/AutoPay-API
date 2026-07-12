@@ -1,3 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autopay-bot"
+version = "1.0.0"
+description = "A Telegram-based automated payment detection system"
+readme = "README.md"
+authors = [
+    { name = "AvtoPaymentBot", email = "admin@example.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "pydantic",
+    "pydantic-settings",
+    "telethon",
+    "cryptography",
+    "psycopg2-binary",
+    "asyncpg",
+    "websockets",
+    "httpx",
+    "slowapi",
+    "python-dotenv",
+    "alembic",
+    "sentry-sdk"
+]
+
+[project.scripts]
+autopay = "autopay.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["autopay"]
+
+[tool.setuptools.package-data]
+autopay = ["alembic/*", "alembic/**/*", "alembic.ini", "config.yml"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

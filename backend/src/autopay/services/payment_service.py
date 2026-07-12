@@ -9,8 +9,8 @@ from typing import Optional
 import httpx
 from sqlalchemy.orm import Session
 
-from repositories.payment_repo import PaymentRepository
-from schemas.payload import CreatePaymentRequest, CreatePaymentResponse, TelegramWebhookPayload
+from autopay.repositories.payment_repo import PaymentRepository
+from autopay.schemas.payload import CreatePaymentRequest, CreatePaymentResponse, TelegramWebhookPayload
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class PaymentService:
         Fix #1: Comparison done in tiyins.
         Fix #2: Webhook firing is async-safe.
         """
-        from services.parsers.dispatcher import ParserDispatcher
+        from autopay.services.parsers.dispatcher import ParserDispatcher
         dispatcher = ParserDispatcher()
 
         # 1. Idempotency

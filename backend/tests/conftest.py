@@ -4,12 +4,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from core.database import get_db
-from core.encryption import generate_api_key
-from core.security import get_current_merchant
-from main import app
-from models.base import Base
-from models.payment import Merchant
+from autopay.core.database import get_db
+from autopay.core.encryption import generate_api_key
+from autopay.core.security import get_current_merchant
+from autopay.app import app
+from autopay.models.base import Base
+from autopay.models.payment import Merchant
 
 # Use in-memory SQLite for testing to avoid touching Postgres
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -60,7 +60,7 @@ def test_merchant(db_session):
 @pytest.fixture(scope="function")
 def client(test_merchant):
     # Disable rate limiter for tests
-    from main import limiter
+    from autopay.app import limiter
     limiter.enabled = False
 
     # Override auth to use our test merchant

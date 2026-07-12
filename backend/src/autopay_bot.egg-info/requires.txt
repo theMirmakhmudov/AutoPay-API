@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pydantic-settings
+telethon
+cryptography
+psycopg2-binary
+asyncpg
+websockets
+httpx
+slowapi
+python-dotenv
+alembic
+sentry-sdk

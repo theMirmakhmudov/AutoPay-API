@@ -2,8 +2,8 @@
 def test_api_unauthorized(client):
     response = client.post("/api/v1/payments/", json={"base_amount": 35000})
     # Our client fixture injects get_current_merchant, so let's clear it for an unauthorized test
-    from core.security import get_current_merchant
-    from main import app
+    from autopay.core.security import get_current_merchant
+    from autopay.app import app
     app.dependency_overrides.pop(get_current_merchant, None)
 
     response = client.post("/api/v1/payments/", json={"base_amount": 35000})

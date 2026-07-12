@@ -7,12 +7,12 @@ from telethon import Button, TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
 from telethon.sessions import StringSession
 
-from core.config import settings
-from core.database import SessionLocal
-from core.encryption import encrypt_session, generate_api_key, generate_webhook_secret
-from models.payment import Merchant, PaymentIntent, ProcessedPayment, UnparsedMessage
-from schemas.payload import CreatePaymentRequest
-from services.payment_service import PaymentService
+from autopay.core.config import settings
+from autopay.core.database import SessionLocal
+from autopay.core.encryption import encrypt_session, generate_api_key, generate_webhook_secret
+from autopay.models.payment import Merchant, PaymentIntent, ProcessedPayment, UnparsedMessage
+from autopay.schemas.payload import CreatePaymentRequest
+from autopay.services.payment_service import PaymentService
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,9 @@
 import pytest
 
-from services.parsers.click_parser import ClickParser
-from services.parsers.humo_parser import HumoParser
-from services.parsers.payme_parser import PaymeParser
-from services.parsers.uzcard_parser import UzcardParser
+from autopay.services.parsers.click_parser import ClickParser
+from autopay.services.parsers.humo_parser import HumoParser
+from autopay.services.parsers.payme_parser import PaymeParser
+from autopay.services.parsers.uzcard_parser import UzcardParser
 
 
 @pytest.mark.parametrize("message_text,expected_tiyins", [

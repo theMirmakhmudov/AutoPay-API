@@ -2,9 +2,9 @@ from fastapi import Depends, HTTPException, Security, status
 from fastapi.security.api_key import APIKeyHeader
 from sqlalchemy.orm import Session
 
-from core.database import get_db
-from core.encryption import hash_api_key
-from models.payment import Merchant
+from autopay.core.database import get_db
+from autopay.core.encryption import hash_api_key
+from autopay.models.payment import Merchant
 
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 

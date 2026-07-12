@@ -2,7 +2,7 @@ import asyncio
 
 import httpx
 
-from core.config import settings
+from autopay.core.config import settings
 
 
 async def test():

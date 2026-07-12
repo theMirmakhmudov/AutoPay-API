@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 load_dotenv()
 
-from models.base import Base
+from autopay.models.base import Base
 
 target_metadata = Base.metadata
 

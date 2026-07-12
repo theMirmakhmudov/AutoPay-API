@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
 
-from models.payment import Merchant, PaymentIntent, ProcessedPayment, UnparsedMessage
+from autopay.models.payment import Merchant, PaymentIntent, ProcessedPayment, UnparsedMessage
 
 
 class PaymentRepository:

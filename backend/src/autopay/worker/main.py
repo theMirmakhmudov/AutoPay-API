@@ -6,8 +6,8 @@ import sentry_sdk
 from telethon.tl.functions.bots import SetBotCommandsRequest
 from telethon.tl.types import BotCommand, BotCommandScopeDefault
 
-from worker.bot import API_HASH, API_ID, BOT_TOKEN, management_bot, set_client_manager
-from worker.client_manager import ClientManager
+from autopay.worker.bot import API_HASH, API_ID, BOT_TOKEN, management_bot, set_client_manager
+from autopay.worker.client_manager import ClientManager
 
 sentry_dsn = os.getenv("SENTRY_DSN")
 if sentry_dsn:
@@ -27,8 +27,8 @@ async def cleanup_expired_intents():
     Fix #3 + Background cleanup: Run every 60s to expire old PaymentIntents.
     Started AFTER the event loop is confirmed running.
     """
-    from core.database import SessionLocal
-    from repositories.payment_repo import PaymentRepository
+    from autopay.core.database import SessionLocal
+    from autopay.repositories.payment_repo import PaymentRepository
 
     while True:
         await asyncio.sleep(60)  # Wait first so loop is fully running

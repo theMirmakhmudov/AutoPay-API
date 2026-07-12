@@ -20,7 +20,7 @@ services:
   api:
     build: .
     container_name: autopay_api
-    command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"
+    command: sh -c "autopay upgrade && autopay web"
     volumes:
       - .:/app
     expose:
@@ -37,7 +37,7 @@ services:
   worker:
     build: .
     container_name: autopay_worker
-    command: python -m worker.main
+    command: autopay worker
     volumes:
       - .:/app
       # Map telethon session files if they are generated locally, but we are using string sessions in the DB now!

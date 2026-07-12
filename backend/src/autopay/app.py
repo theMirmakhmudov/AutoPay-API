@@ -5,8 +5,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from api import merchants, payments, webhooks
-from core.config import settings
+from autopay.api import merchants, payments, webhooks
+from autopay.core.config import settings
 
 sentry_dsn = os.getenv("SENTRY_DSN")
 if sentry_dsn:
@@ -20,7 +20,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from core.rate_limit import limiter
+from autopay.core.rate_limit import limiter
 
 
 @asynccontextmanager

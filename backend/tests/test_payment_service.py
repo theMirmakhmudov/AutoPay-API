@@ -3,8 +3,8 @@ import hmac
 
 import pytest
 
-from schemas.payload import CreatePaymentRequest
-from services.payment_service import PaymentService
+from autopay.schemas.payload import CreatePaymentRequest
+from autopay.services.payment_service import PaymentService
 
 
 def test_create_payment_no_collision(db_session, test_merchant):
@@ -60,7 +60,7 @@ def test_payment_idempotency_different_base(db_session, test_merchant):
 
 from unittest.mock import AsyncMock, patch
 
-from services.payment_service import fire_webhook_with_retry
+from autopay.services.payment_service import fire_webhook_with_retry
 
 
 @pytest.mark.asyncio
