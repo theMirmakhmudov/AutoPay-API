@@ -2,10 +2,10 @@ import asyncio
 import logging
 from typing import Dict
 
-from telethon import TelegramClient, events, errors
+from telethon import TelegramClient, errors, events
 from telethon.sessions import StringSession
-from autopay.core.config import settings
 
+from autopay.core.config import settings
 from autopay.core.database import SessionLocal
 from autopay.core.encryption import decrypt_session
 from autopay.models.payment import Merchant
@@ -129,7 +129,7 @@ class ClientManager:
                 await client.get_me()
             except errors.UnauthorizedError:
                 logger.warning(f"Session revoked or unauthorized for merchant {merchant_id}")
-                
+
                 # Mark as disconnected
                 merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
                 if merchant:

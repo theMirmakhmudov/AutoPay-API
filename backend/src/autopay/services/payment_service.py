@@ -10,7 +10,11 @@ import httpx
 from sqlalchemy.orm import Session
 
 from autopay.repositories.payment_repo import PaymentRepository
-from autopay.schemas.payload import CreatePaymentRequest, CreatePaymentResponse, TelegramWebhookPayload
+from autopay.schemas.payload import (
+    CreatePaymentRequest,
+    CreatePaymentResponse,
+    TelegramWebhookPayload,
+)
 
 logger = logging.getLogger(__name__)
 
