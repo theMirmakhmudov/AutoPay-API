@@ -95,7 +95,7 @@ async def main():
     set_client_manager(manager)  # bot.py can now call manager.start_client()
     await manager.start_all_clients()
     logger.info("✅ All merchant userbots connected")
-    
+
     # Start health check loop
     asyncio.get_event_loop().create_task(run_health_checks(manager))
 

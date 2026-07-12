@@ -4,10 +4,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from autopay.app import app
 from autopay.core.database import get_db
 from autopay.core.encryption import generate_api_key
 from autopay.core.security import get_current_merchant
-from autopay.app import app
 from autopay.models.base import Base
 from autopay.models.payment import Merchant
 
