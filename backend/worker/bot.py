@@ -90,15 +90,11 @@ async def stats_handler(event):
     db.close()
 
     html = (
-        "<b>🛡️ Admin Stats</b>
-"
+        "<b>🛡️ Admin Stats</b>\n"
         "<blockquote expandable>"
-        f"👥 <b>Merchants:</b> {connected_merchants} active / {total_merchants} total
-"
-        f"📝 <b>Intents:</b> {paid_intents} paid / {total_intents} total
-"
-        f"💰 <b>Payments:</b> {total_payments}
-"
+        f"👥 <b>Merchants:</b> {connected_merchants} active / {total_merchants} total\n"
+        f"📝 <b>Intents:</b> {paid_intents} paid / {total_intents} total\n"
+        f"💰 <b>Payments:</b> {total_payments}\n"
         "</blockquote>"
     )
 
@@ -114,18 +110,13 @@ async def merchants_handler(event):
     merchants = db.query(Merchant).all()
     db.close()
 
-    html = "<b>👥 Registered Merchants</b>
-
-"
+    html = "<b>👥 Registered Merchants</b>\n\n"
     if not merchants:
         html += "<i>No merchants found.</i>"
     else:
         for m in merchants:
             status = "🟢" if m.is_connected else "🔴"
-            html += f'{status} <b>{m.phone_number}</b>
-<code>{m.id}</code>
-
-'
+            html += f'{status} <b>{m.phone_number}</b>\n<code>{m.id}</code>\n\n'
 
 
     await send_or_edit_rich_message(event, html)
@@ -221,15 +212,11 @@ async def callback_stats(event):
     db.close()
 
     html = (
-        "<b>🛡️ Admin Stats</b>
-"
+        "<b>🛡️ Admin Stats</b>\n"
         "<blockquote expandable>"
-        f"👥 <b>Merchants:</b> {connected_merchants} active / {total_merchants} total
-"
-        f"📝 <b>Intents:</b> {paid_intents} paid / {total_intents} total
-"
-        f"💰 <b>Payments:</b> {total_payments}
-"
+        f"👥 <b>Merchants:</b> {connected_merchants} active / {total_merchants} total\n"
+        f"📝 <b>Intents:</b> {paid_intents} paid / {total_intents} total\n"
+        f"💰 <b>Payments:</b> {total_payments}\n"
         "</blockquote>"
     )
 
@@ -250,18 +237,13 @@ async def callback_merchants(event):
     merchants = db.query(Merchant).all()
     db.close()
 
-    html = "<b>👥 Registered Merchants</b>
-
-"
+    html = "<b>👥 Registered Merchants</b>\n\n"
     if not merchants:
         html += "<i>No merchants found.</i>"
     else:
         for m in merchants:
             status = "🟢" if m.is_connected else "🔴"
-            html += f'{status} <b>{m.phone_number}</b>
-<code>{m.id}</code>
-
-'
+            html += f'{status} <b>{m.phone_number}</b>\n<code>{m.id}</code>\n\n'
 
 
     reply_markup = {
@@ -282,12 +264,9 @@ async def callback_revenue(event):
     db.close()
 
     html = (
-        "<b>💰 Revenue Tracker</b>
-"
+        "<b>💰 Revenue Tracker</b>\n"
         "<blockquote expandable>"
-        f"<b>Total Volume Processed:</b> {total_revenue:,.2f} UZS
-
-"
+        f"<b>Total Volume Processed:</b> {total_revenue:,.2f} UZS\n\n"
         "<i>(This is the sum of all successfully paid payment intents)</i>"
         "</blockquote>"
     )
@@ -307,19 +286,14 @@ async def callback_recent(event):
     recent = db.query(ProcessedPayment).order_by(ProcessedPayment.date_received.desc()).limit(5).all()
     db.close()
 
-    html = "<b>📈 Recent Transactions</b>
-"
+    html = "<b>📈 Recent Transactions</b>\n"
     if not recent:
         html += "<i>No transactions yet.</i>"
     else:
         html += "<blockquote expandable>"
         for r in recent:
             amount = r.amount_tiyins / 100
-            html += f"<b>{amount:,.2f} UZS</b> via {r.source}
-Date: {r.date_received.strftime('%Y-%m-%d %H:%M')}
-Status: {r.status}
-
-"
+            html += f"<b>{amount:,.2f} UZS</b> via {r.source}\nDate: {r.date_received.strftime('%Y-%m-%d %H:%M')}\nStatus: {r.status}\n\n"
         html += "</blockquote>"
 
     reply_markup = {
@@ -338,18 +312,13 @@ async def callback_errors(event):
     errors = db.query(UnparsedMessage).filter(UnparsedMessage.is_resolved == False).order_by(UnparsedMessage.date_received.desc()).limit(5).all()
     db.close()
 
-    html = "<b>⚠️ Recent Unparsed Messages (Dead Letter Queue)</b>
-"
+    html = "<b>⚠️ Recent Unparsed Messages (Dead Letter Queue)</b>\n"
     if not errors:
         html += "✅ <i>All systems normal. No recent parsing errors.</i>"
     else:
         html += "<blockquote expandable>"
         for e in errors:
-            html += f"<b>Error:</b> {e.error_reason}
-<b>Date:</b> {e.date_received.strftime('%Y-%m-%d %H:%M')}
-<code>{e.raw_text[:50]}...</code>
-
-"
+            html += f"<b>Error:</b> {e.error_reason}\n<b>Date:</b> {e.date_received.strftime('%Y-%m-%d %H:%M')}\n<code>{e.raw_text[:50]}...</code>\n\n"
         html += "</blockquote>"
 
     reply_markup = {
@@ -385,13 +354,9 @@ async def callback_payments_table(event):
     payments = db.query(ProcessedPayment, Merchant).join(Merchant, ProcessedPayment.merchant_id == Merchant.id).order_by(ProcessedPayment.date_received.desc()).offset(offset).limit(per_page).all()
     db.close()
 
-    html = f"<b>📊 Payments Database (Page {page+1})</b>
-
-<pre>"
-    html += f"{'Date':<6}|{'Phone':<9}|{'Amount':<6}|{'Src':<4}
-"
-    html += "-"*28 + "
-"
+    html = f"<b>📊 Payments Database (Page {page+1})</b>\n\n<pre>"
+    html += f"{'Date':<6}|{'Phone':<9}|{'Amount':<6}|{'Src':<4}\n"
+    html += "-"*28 + "\n"
 
     for p, m in payments:
         date_str = p.date_received.strftime("%m-%d")
@@ -405,15 +370,12 @@ async def callback_payments_table(event):
             amt_str = str(int(amt))
         src = p.source[:4] if p.source else "UNK"
 
-        html += f"{date_str:<6}|{phone:<9}|{amt_str:<6}|{src:<4}
-"
+        html += f"{date_str:<6}|{phone:<9}|{amt_str:<6}|{src:<4}\n"
 
-    html += f"</pre>
-<i>Total records: {total_count}</i>"
+    html += f"</pre>\n<i>Total records: {total_count}</i>"
 
     if total_count == 0:
-        html = "<b>📊 Payments Database</b>
-<i>No payments found.</i>"
+        html = "<b>📊 Payments Database</b>\n<i>No payments found.</i>"
 
     inline_keyboard = []
     nav_row = []
