@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "autopay-bot"
-version = "1.0.0"
+name = "autopaybot"
+version = "0.1.0"
 description = "A Telegram-based automated payment detection system"
 readme = "README.md"
 authors = [
