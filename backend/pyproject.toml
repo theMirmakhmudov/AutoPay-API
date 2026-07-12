@@ -29,6 +29,14 @@ dependencies = [
     "sentry-sdk"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "mypy"
+]
+
 [project.scripts]
 autopay = "autopay.cli:main"
 

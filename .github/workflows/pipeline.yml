@@ -1,0 +1,60 @@
+name: Unified CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install Project & Dev Dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run Ruff (Linter)
+        working-directory: ./backend
+        run: ruff check .
+
+      - name: Run MyPy (Type Checker)
+        working-directory: ./backend
+        run: mypy .
+
+      - name: Run PyTest
+        working-directory: ./backend
+        run: pytest tests/ -v
+
+  deploy:
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Sync Files to Production Directory
+        run: |
+          # Use rsync to mirror the repository content safely to the actual deployment folder
+          rsync -avz --delete --exclude '.env' --exclude 'venv' --exclude '__pycache__' --exclude 'scratch' --exclude '.git' --exclude 'backups' --exclude 'payment_system.db' ./ ~/AvtoPaymentBot/
+
+      - name: Rebuild & Restart Docker Containers (Bypass ContainerConfig bug)
+        env:
+          SUDO_PASSWORD: ${{ secrets.SUDO_PASSWORD }}
+        run: |
+          cd ~/AvtoPaymentBot/backend
+          # Provide the sudo password via stdin to safely execute privileged commands
+          echo "$SUDO_PASSWORD" | sudo -S docker rm -f autopay_worker autopay_api || true
+          echo "$SUDO_PASSWORD" | sudo -S docker-compose up --build -d
