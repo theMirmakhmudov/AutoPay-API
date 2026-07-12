@@ -42,6 +42,18 @@ async def cleanup_expired_intents():
         except Exception as e:
             logger.error(f"Cleanup task error: {e}")
 
+async def run_health_checks(manager: ClientManager):
+    """
+    Periodically checks the health of all active Telethon userbots.
+    If a session is revoked, it updates the DB and notifies the merchant/admin.
+    """
+    while True:
+        await asyncio.sleep(300)  # Check every 5 minutes
+        try:
+            await manager.health_check_clients()
+        except Exception as e:
+            logger.error(f"Health check task error: {e}")
+
 async def main():
     logger.info("Starting Managed Telethon Worker Service...")
 
@@ -83,6 +95,9 @@ async def main():
     set_client_manager(manager)  # bot.py can now call manager.start_client()
     await manager.start_all_clients()
     logger.info("✅ All merchant userbots connected")
+    
+    # Start health check loop
+    asyncio.get_event_loop().create_task(run_health_checks(manager))
 
     # 3. Run indefinitely
     await management_bot.run_until_disconnected()

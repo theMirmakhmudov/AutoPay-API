@@ -2,8 +2,9 @@ import asyncio
 import logging
 from typing import Dict
 
-from telethon import TelegramClient, events
+from telethon import TelegramClient, events, errors
 from telethon.sessions import StringSession
+from core.config import settings
 
 from core.database import SessionLocal
 from core.encryption import decrypt_session
@@ -116,3 +117,46 @@ class ClientManager:
             logger.error(f"Error handling message for {merchant_id}: {e}", exc_info=True)
         finally:
             db.close()
+
+    async def health_check_clients(self):
+        db = SessionLocal()
+        from worker.bot import management_bot
+        admin_ids = [int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()]
+
+        # We must copy keys because we might modify the dict during iteration
+        for merchant_id, client in list(self.clients.items()):
+            try:
+                await client.get_me()
+            except errors.UnauthorizedError:
+                logger.warning(f"Session revoked or unauthorized for merchant {merchant_id}")
+                
+                # Mark as disconnected
+                merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
+                if merchant:
+                    merchant.is_connected = False
+                    db.commit()
+
+                    # Try notifying the merchant
+                    if merchant.name.startswith("Merchant_"):
+                        telegram_user_id = int(merchant.name.split("_")[1])
+                        alert_msg = "⚠️ *CRITICAL ALERT* ⚠️\n\nYour Telegram session was disconnected or revoked! The bot can no longer read incoming payments.\n\nPlease use `/login` to reconnect your account immediately."
+                        try:
+                            await management_bot.send_message(telegram_user_id, alert_msg, parse_mode='md')
+                        except Exception as e:
+                            logger.error(f"Failed to notify merchant {merchant_id} of disconnect: {e}")
+
+                    # Notify admins
+                    admin_msg = f"🚨 *Merchant Disconnected*\n\nMerchant ID: `{merchant.id}`\nPhone: `{merchant.phone_number}`\n\nThe userbot session was terminated. They have been automatically marked as disconnected."
+                    for admin_id in admin_ids:
+                        try:
+                            await management_bot.send_message(admin_id, admin_msg, parse_mode='md')
+                        except Exception as e:
+                            pass
+
+                # Stop the client on our end
+                await self.stop_client(merchant_id)
+            except Exception as e:
+                # Other exceptions (like network errors) shouldn't cause a forced disconnect
+                logger.error(f"Error during health check for {merchant_id}: {e}")
+
+        db.close()
