@@ -17,7 +17,7 @@ import sys
 
 from dotenv import load_dotenv
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 load_dotenv()
 
 from autopay.models.base import Base
