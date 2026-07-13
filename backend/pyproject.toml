@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autopaybot"
-version = "0.1.13"
+version = "0.1.14"
 description = "A powerful, automated payment gateway bot for Telegram."
 readme = "README.md"
 authors = [

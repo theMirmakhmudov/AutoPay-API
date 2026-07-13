@@ -71,8 +71,26 @@ def deploy_command(args):
             print("Aborted.")
             return
 
+    print("\n" + "="*70)
+    print(" 🚀 CLOUDFLARE TUNNEL SETUP (Remotely Managed)")
+    print("="*70)
+    print("To connect your server safely without exposing ports, we use Cloudflare Tunnels.")
+    print("Please follow these exact steps to get your Token:\n")
+    print("  1. Go to: https://one.dash.cloudflare.com/")
+    print("  2. Navigate to: Networks -> Tunnels")
+    print("  3. Click 'Create a tunnel' (blue button)")
+    print("  4. Select 'Cloudflared', click Next, and name it 'autopay_api'")
+    print("  5. In the 'Install connector' page, copy the long Token starting with 'eyJh...'")
+    print("  6. Click Next and add a Public Hostname with these settings:")
+    print("       - Subdomain: api")
+    print("       - Domain: <your-domain.com>")
+    print("       - Service Type: HTTP")
+    print("       - URL: autopay_nginx:80")
+    print("  7. Click 'Save hostname'.\n")
+    print("="*70)
+
     domain = input("What is your domain name? (e.g. cerifynow.uz): ").strip()
-    tunnel_token = input("What is your Cloudflare Tunnel Token?: ").strip()
+    tunnel_token = input("Paste your Cloudflare Tunnel Token here (eyJh...): ").strip()
 
     compose_template = """version: '3.8'
 
