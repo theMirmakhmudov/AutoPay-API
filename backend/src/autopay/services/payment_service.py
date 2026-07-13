@@ -19,7 +19,7 @@ from autopay.schemas.payload import (
 logger = logging.getLogger(__name__)
 
 # Fix #5: Max UZS difference allowed before we refuse and force user to wait
-MAX_COLLISION_OFFSET_TIYINS = 1000  # 10 UZS in tiyins
+MAX_COLLISION_OFFSET_TIYINS = 5000  # 50 UZS in tiyins (handles up to 50 concurrent identical payments)
 
 class PaymentService:
     def __init__(self, db: Session):
@@ -38,7 +38,7 @@ class PaymentService:
 
         has_collision = False
         if max_expected is not None:
-            next_expected = max_expected + 1  # +1 tiyin = +0.01 UZS
+            next_expected = max_expected + 100  # +100 tiyins = +1.00 UZS
 
             # Fix #5: If we've already gone 10 UZS above base, don't increment further
             if (next_expected - base_tiyins) > MAX_COLLISION_OFFSET_TIYINS:
