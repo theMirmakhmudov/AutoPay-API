@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 
 from autopay.core.security import get_current_merchant
 from autopay.models.payment import Merchant
@@ -17,4 +17,44 @@ router = APIRouter()
 def get_my_credentials(merchant: Merchant = Depends(get_current_merchant)):
     return create_success_response(
         data=MerchantView.model_validate(merchant), message="Credentials fetched"
+    )
+
+
+@router.post(
+    "/test-webhook",
+    response_model=BaseResponse[dict],
+    summary="Test Webhook Delivery",
+    description="Fires a dummy webhook event to your configured webhook URL so you can test your integration in Postman.",
+)
+def test_webhook(
+    background_tasks: BackgroundTasks,
+    merchant: Merchant = Depends(get_current_merchant)
+):
+    from fastapi import HTTPException
+    import uuid
+    from autopay.services.payment_service import fire_webhook_with_retry
+
+    if not merchant.webhook_url:
+        raise HTTPException(status_code=400, detail="No webhook URL configured.")
+
+    dummy_payment_id = f"test_pay_{uuid.uuid4().hex[:8]}"
+    dummy_intent_id = f"test_intent_{uuid.uuid4().hex[:8]}"
+    
+    background_tasks.add_task(
+        fire_webhook_with_retry,
+        merchant.webhook_url,
+        dummy_payment_id,
+        dummy_intent_id,
+        5000000, # 50,000 UZS
+        merchant.webhook_secret
+    )
+    
+    return create_success_response(
+        data={
+            "webhook_url": merchant.webhook_url,
+            "dummy_payment_id": dummy_payment_id,
+            "dummy_intent_id": dummy_intent_id,
+            "amount": 50000.0,
+        },
+        message="Test webhook fired successfully in the background."
     )
