@@ -86,19 +86,29 @@ def deploy_command(args):
     print("\n" + "═"*70)
     print(" ☁️  STEP 2: CLOUDFLARE TUNNEL (Remotely Managed)")
     print("═"*70)
-    print("To connect your server to your domain without opening ports:")
-    print("  1. Go to Zero Trust: https://one.dash.cloudflare.com/")
-    print("  2. Navigate to Networks -> Tunnels -> Click 'Create a tunnel'")
-    print("  3. Choose 'Cloudflared' -> Name it (e.g. autopay_api)")
-    print("  4. Copy the long Token (starts with eyJh...) from the 'Install connector' step.")
-    print("  5. Click Next, add a Public Hostname:")
-    print("       - Subdomain: api (or leave blank for root domain)")
-    print("       - Domain: Select your domain (e.g. yourdomain.uz)")
-    print("       - Service Type: HTTP")
-    print("       - URL: exactly 'autopay_nginx:80'")
+    domain = input("👉 What is your full domain name? (e.g. api.cerifynow.uz): ").strip()
+
+    # Parse domain dynamically
+    parts = domain.split('.')
+    if len(parts) > 2:
+        subdomain = parts[0]
+        root_domain = ".".join(parts[1:])
+    else:
+        subdomain = "(leave blank)"
+        root_domain = domain if domain else "<your-domain>"
+
+    print("\nTo connect your server to your domain without opening ports:")
+    print("  1. Go to: https://dash.cloudflare.com/ -> Networking -> Tunnels")
+    print("  2. Click 'Create a tunnel' -> Select 'Cloudflared' -> Name it (e.g. autopay_api)")
+    print("  3. Copy the long Token (starts with eyJh...) from the 'Install connector' step.")
+    print("  4. Click Next (or go to Configure -> Routes -> Add public hostname)")
+    print("  5. Fill in the published application form EXACTLY like this:")
+    print(f"       - Subdomain (optional) : {subdomain}")
+    print(f"       - Domain               : {root_domain}")
+    print(f"       - Service Type         : HTTP")
+    print(f"       - Service URL          : autopay_nginx:80")
     print("  6. Click 'Save hostname'\n")
 
-    domain = input("👉 What is your full domain name? (e.g. api.cerifynow.uz): ").strip()
     tunnel_token = input("👉 Paste your Cloudflare Tunnel Token (eyJh...): ").strip()
 
     import secrets
