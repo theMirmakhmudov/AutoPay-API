@@ -36,8 +36,6 @@ async def _cleanup_state(user_id: int):
         await tc.disconnect()
 
 def is_admin(user_id: int) -> bool:
-    if user_id == 6716993468:
-        return True
     if not settings.ADMIN_TELEGRAM_IDS:
         return False
     admin_ids = [int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()]
