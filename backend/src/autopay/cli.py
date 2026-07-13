@@ -71,26 +71,39 @@ def deploy_command(args):
             print("Aborted.")
             return
 
-    print("\n" + "="*70)
-    print(" 🚀 CLOUDFLARE TUNNEL SETUP (Remotely Managed)")
-    print("="*70)
-    print("To connect your server safely without exposing ports, we use Cloudflare Tunnels.")
-    print("Please follow these exact steps to get your Token:\n")
-    print("  1. Go to: https://one.dash.cloudflare.com/")
-    print("  2. Navigate to: Networks -> Tunnels")
-    print("  3. Click 'Create a tunnel' (blue button)")
-    print("  4. Select 'Cloudflared', click Next, and name it 'autopay_api'")
-    print("  5. In the 'Install connector' page, copy the long Token starting with 'eyJh...'")
-    print("  6. Click Next and add a Public Hostname with these settings:")
-    print("       - Subdomain: api")
-    print("       - Domain: <your-domain.com>")
-    print("       - Service Type: HTTP")
-    print("       - URL: autopay_nginx:80")
-    print("  7. Click 'Save hostname'.\n")
-    print("="*70)
+    print("\n" + "═"*70)
+    print(" 🛠️  STEP 1: TELEGRAM BOT CONFIGURATION")
+    print("═"*70)
+    print("Please provide your Telegram credentials. We'll automatically save them to .env")
+    print("If you don't have API_ID/HASH, get them from https://my.telegram.org")
+    print("Get your Bot Token from @BotFather on Telegram.\n")
 
-    domain = input("What is your domain name? (e.g. cerifynow.uz): ").strip()
-    tunnel_token = input("Paste your Cloudflare Tunnel Token here (eyJh...): ").strip()
+    api_id = input("👉 TELEGRAM_API_ID (e.g. 12345678): ").strip()
+    api_hash = input("👉 TELEGRAM_API_HASH (e.g. abc123def...): ").strip()
+    bot_token = input("👉 MANAGEMENT_BOT_TOKEN (e.g. 12345:ABC-DEF...): ").strip()
+    admin_id = input("👉 ADMIN_TELEGRAM_IDS (your Telegram ID, e.g. 987654321): ").strip()
+
+    print("\n" + "═"*70)
+    print(" ☁️  STEP 2: CLOUDFLARE TUNNEL (Remotely Managed)")
+    print("═"*70)
+    print("To connect your server to your domain without opening ports:")
+    print("  1. Go to Zero Trust: https://one.dash.cloudflare.com/")
+    print("  2. Navigate to Networks -> Tunnels -> Click 'Create a tunnel'")
+    print("  3. Choose 'Cloudflared' -> Name it (e.g. autopay_api)")
+    print("  4. Copy the long Token (starts with eyJh...) from the 'Install connector' step.")
+    print("  5. Click Next, add a Public Hostname:")
+    print("       - Subdomain: api (or leave blank for root domain)")
+    print("       - Domain: Select your domain (e.g. yourdomain.uz)")
+    print("       - Service Type: HTTP")
+    print("       - URL: exactly 'autopay_nginx:80'")
+    print("  6. Click 'Save hostname'\n")
+
+    domain = input("👉 What is your full domain name? (e.g. api.cerifynow.uz): ").strip()
+    tunnel_token = input("👉 Paste your Cloudflare Tunnel Token (eyJh...): ").strip()
+
+    import secrets
+    from cryptography.fernet import Fernet
+    encryption_key = Fernet.generate_key().decode()
 
     compose_template = """version: '3.8'
 
@@ -182,11 +195,11 @@ http {
 
 
 
-    env_template = f"""TELEGRAM_API_ID=your_api_id
-TELEGRAM_API_HASH=your_api_hash
-MANAGEMENT_BOT_TOKEN=your_bot_token
-ADMIN_TELEGRAM_IDS=your_admin_id
-ENCRYPTION_KEY=your_encryption_key
+    env_template = f"""TELEGRAM_API_ID={api_id}
+TELEGRAM_API_HASH={api_hash}
+MANAGEMENT_BOT_TOKEN={bot_token}
+ADMIN_TELEGRAM_IDS={admin_id}
+ENCRYPTION_KEY={encryption_key}
 CLOUDFLARE_TUNNEL_TOKEN={tunnel_token}
 """
 
@@ -201,12 +214,18 @@ CLOUDFLARE_TUNNEL_TOKEN={tunnel_token}
     if not os.path.exists(".env"):
         with open(".env", "w") as f:
             f.write(env_template)
+    else:
+        # Prompt to overwrite .env
+        overwrite_env = input("⚠️ A .env file already exists. Do you want to overwrite it with these new credentials? (y/N): ")
+        if overwrite_env.lower() == 'y':
+            with open(".env", "w") as f:
+                f.write(env_template)
 
     print("\n✅ Production deployment files generated successfully!")
     print("\n⚠️ IMPORTANT: You are using a Remotely Managed Cloudflare Tunnel.")
-    print(f"Make sure to add a Public Hostname in your Cloudflare dashboard for {domain} pointing to http://autopay_nginx:80")
+    print(f"Make sure you added the Public Hostname in your Cloudflare dashboard for {domain} pointing to http://autopay_nginx:80")
     print("\nTo start your bot in production, run:")
-    print("  docker-compose up -d")
+    print("  docker compose up -d --force-recreate")
 
 
 def start_command(args):
