@@ -147,7 +147,7 @@ def test_webhook_parse_error(client, test_merchant):
     assert resp.json()["error_code"] == "PARSE_ERROR"
 
 
-def test_root_redirect(client):
+def test_root_health_check(client):
     resp = client.get("/", follow_redirects=False)
-    assert resp.status_code == 307
-    assert resp.headers["location"] == "/docs"
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
