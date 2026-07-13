@@ -63,8 +63,7 @@ SENTRY_DSN=
 
 def deploy_command(args):
     """Generate a production-ready deployment stack for AutopayBot."""
-    import shutil
-    
+
     if os.path.exists("docker-compose.yml"):
         print("⚠️ A docker-compose.yml file already exists in the current directory.")
         overwrite = input("Do you want to overwrite it? (y/N): ")
@@ -75,7 +74,7 @@ def deploy_command(args):
     domain = input("What is your domain name? (e.g. cerifynow.uz): ").strip()
     tunnel_uuid = input("What is your Cloudflare Tunnel UUID?: ").strip()
 
-    compose_template = f"""version: '3.8'
+    compose_template = """version: '3.8'
 
 services:
   db:
@@ -146,22 +145,22 @@ volumes:
   postgres_data:
 """
 
-    nginx_template = f"""events {{}}
+    nginx_template = """events {}
 
-http {{
-    server {{
+http {
+    server {
         listen 80;
         server_name _;
 
-        location / {{
+        location / {
             proxy_pass http://api:8000;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-        }}
-    }}
-}}
+        }
+    }
+}
 """
 
     config_template = f"""tunnel: {tunnel_uuid}
@@ -184,14 +183,14 @@ ENCRYPTION_KEY=your_encryption_key
 
     # Write files
     os.makedirs("nginx", exist_ok=True)
-    
+
     with open("docker-compose.yml", "w") as f:
         f.write(compose_template)
     with open("nginx/nginx.conf", "w") as f:
         f.write(nginx_template)
     with open("config.yml", "w") as f:
         f.write(config_template)
-    
+
     if not os.path.exists(".env"):
         with open(".env", "w") as f:
             f.write(env_template)
