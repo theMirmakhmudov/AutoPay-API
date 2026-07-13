@@ -58,6 +58,9 @@ jobs:
           # Ensure tunnel.json exists as a file so Docker doesn't create it as a directory
           if [ -d "tunnel.json" ]; then sudo rm -rf tunnel.json; fi
           touch tunnel.json
+          # Do the same for config.yml
+          if [ -d "config.yml" ]; then sudo rm -rf config.yml; fi
+          touch config.yml
           # Provide the sudo password via stdin to safely execute privileged commands
           echo "$SUDO_PASSWORD" | sudo -S docker rm -f autopay_worker autopay_api || true
           echo "$SUDO_PASSWORD" | sudo -S docker-compose up --build -d
