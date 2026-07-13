@@ -13,12 +13,13 @@ class Settings(BaseSettings):
     TELEGRAM_API_ID: int = 0
     TELEGRAM_API_HASH: str = ""
     MANAGEMENT_BOT_TOKEN: str = ""
-    ADMIN_TELEGRAM_IDS: str = "" # Comma-separated list of admin user IDs
+    ADMIN_TELEGRAM_IDS: str = ""  # Comma-separated list of admin user IDs
 
     # Security — Fernet key for encrypting session strings at rest
     # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     ENCRYPTION_KEY: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+
 
 settings = Settings()

@@ -19,8 +19,8 @@ class ClickParser(BaseParser):
         if "To'ldirish" not in text and "Пополнение" not in text:
             return None
 
-        amount_match = re.search(r'➕\s*([\d.,]+)\s*UZS', text)
-        card_match = re.search(r'💳\s*([A-Za-z]+)\s*\*(\d{4})', text)
+        amount_match = re.search(r"➕\s*([\d.,]+)\s*UZS", text)
+        card_match = re.search(r"💳\s*([A-Za-z]+)\s*\*(\d{4})", text)
 
         if not amount_match:
             return None
@@ -30,5 +30,5 @@ class ClickParser(BaseParser):
             "currency": "UZS",
             "card_type": card_match.group(1).upper() if card_match else "UNKNOWN",
             "receiver_card_info": f"*{card_match.group(2)}" if card_match else None,
-            "source": "CLICK"
+            "source": "CLICK",
         }

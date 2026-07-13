@@ -17,8 +17,6 @@ from autopay.models.payment import (
     ProcessedPayment,
     UnparsedMessage,
 )
-from autopay.schemas.payload import CreatePaymentRequest
-from autopay.services.payment_service import PaymentService
 
 logger = logging.getLogger(__name__)
 
@@ -26,14 +24,16 @@ API_ID = settings.TELEGRAM_API_ID
 API_HASH = settings.TELEGRAM_API_HASH
 BOT_TOKEN = settings.MANAGEMENT_BOT_TOKEN
 
-management_bot = TelegramClient('management_bot_session', API_ID, API_HASH)
+management_bot = TelegramClient("management_bot_session", API_ID, API_HASH)
 
 user_states = {}
 _client_manager = None
 
+
 def set_client_manager(manager):
     global _client_manager
     _client_manager = manager
+
 
 async def _cleanup_state(user_id: int):
     state = user_states.pop(user_id, {})
@@ -41,11 +41,15 @@ async def _cleanup_state(user_id: int):
     if tc and tc.is_connected():
         await tc.disconnect()
 
+
 def is_admin(user_id: int) -> bool:
     if not settings.ADMIN_TELEGRAM_IDS:
         return False
-    admin_ids = [int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()]
+    admin_ids = [
+        int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()
+    ]
     return user_id in admin_ids
+
 
 from typing import Optional
 
@@ -57,15 +61,11 @@ async def send_or_edit_rich_message(event, html_content: str, reply_markup: Opti
             "chat_id": event.chat_id,
             "message_id": event.message_id,
             "text": html_content,
-            "parse_mode": "HTML"
+            "parse_mode": "HTML",
         }
     else:
         url = f"https://api.telegram.org/bot{settings.MANAGEMENT_BOT_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": event.chat_id,
-            "text": html_content,
-            "parse_mode": "HTML"
-        }
+        payload = {"chat_id": event.chat_id, "text": html_content, "parse_mode": "HTML"}
 
     if reply_markup:
         payload["reply_markup"] = reply_markup
@@ -75,9 +75,11 @@ async def send_or_edit_rich_message(event, html_content: str, reply_markup: Opti
         if r.status_code != 200:
             logger.error(f"Failed to send/edit rich message: {r.text}")
 
+
 # ── Admin Commands ─────────────────────────────────────────────────────────
 
-@management_bot.on(events.NewMessage(pattern='/stats'))
+
+@management_bot.on(events.NewMessage(pattern="/stats"))
 async def stats_handler(event):
     if not is_admin(event.sender_id):
         await event.respond("❌ Access denied.")
@@ -104,7 +106,8 @@ async def stats_handler(event):
 
     await send_or_edit_rich_message(event, html)
 
-@management_bot.on(events.NewMessage(pattern='/merchants'))
+
+@management_bot.on(events.NewMessage(pattern="/merchants"))
 async def merchants_handler(event):
     if not is_admin(event.sender_id):
         await event.respond("❌ Access denied.")
@@ -120,12 +123,12 @@ async def merchants_handler(event):
     else:
         for m in merchants:
             status = "🟢" if m.is_connected else "🔴"
-            html += f'{status} <b>{m.phone_number}</b>\n<code>{m.id}</code>\n\n'
-
+            html += f"{status} <b>{m.phone_number}</b>\n<code>{m.id}</code>\n\n"
 
     await send_or_edit_rich_message(event, html)
 
-@management_bot.on(events.NewMessage(pattern=r'/ban (.+)'))
+
+@management_bot.on(events.NewMessage(pattern=r"/ban (.+)"))
 async def ban_handler(event):
     if not is_admin(event.sender_id):
         await event.respond("❌ Access denied.")
@@ -148,12 +151,15 @@ async def ban_handler(event):
     if _client_manager:
         await _client_manager.stop_client(merchant_id)
 
-    await event.respond(f"✅ Merchant <code>{merchant_id}</code> banned and disconnected.", parse_mode='html')
+    await event.respond(
+        f"✅ Merchant <code>{merchant_id}</code> banned and disconnected.", parse_mode="html"
+    )
 
 
 # ── Merchant Commands ──────────────────────────────────────────────────────
 
-@management_bot.on(events.NewMessage(pattern='/start'))
+
+@management_bot.on(events.NewMessage(pattern="/start"))
 async def start_handler(event):
     await _cleanup_state(event.sender_id)
 
@@ -162,58 +168,98 @@ async def start_handler(event):
         try:
             from telethon.tl.functions.bots import SetBotCommandsRequest
             from telethon.tl.types import BotCommand, BotCommandScopePeer
+
             user_cmds = [
                 BotCommand(command="start", description="Start the bot and link account"),
                 BotCommand(command="credentials", description="View your Merchant ID and Secrets"),
-                BotCommand(command="status", description="Check connection status"),
-                BotCommand(command="create", description="Generate a payment intent"),
-                BotCommand(command="setwebhook", description="Set webhook URL"),
                 BotCommand(command="setcard", description="Set receiving card last 4 digits"),
                 BotCommand(command="unsetcard", description="Remove receiving card filter"),
-                BotCommand(command="disconnect", description="Disconnect your Telegram account")
+                BotCommand(command="disconnect", description="Disconnect your Telegram account"),
             ]
             admin_cmds = [
                 BotCommand(command="start", description="Open Admin Control Panel"),
                 BotCommand(command="stats", description="View system statistics"),
                 BotCommand(command="merchants", description="List all connected merchants"),
-                BotCommand(command="ban", description="Ban a merchant")
+                BotCommand(command="ban", description="Ban a merchant"),
             ]
-            await management_bot(SetBotCommandsRequest(
-                scope=BotCommandScopePeer(event.input_sender),
-                lang_code='',
-                commands=admin_cmds + user_cmds
-            ))
+            await management_bot(
+                SetBotCommandsRequest(
+                    scope=BotCommandScopePeer(event.input_sender),
+                    lang_code="",
+                    commands=admin_cmds + user_cmds,
+                )
+            )
         except Exception as e:
             logger.error(f"Failed to set admin commands menu: {e}")
 
         await event.respond(
             "<b>🛡️ Admin Control Panel</b>",
-            parse_mode='html',
+            parse_mode="html",
             buttons=[
-                [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
-                [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
-                [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
+                [
+                    Button.inline("📊 Stats", b"admin_stats"),
+                    Button.inline("👥 Merchants", b"admin_merchants"),
+                ],
+                [
+                    Button.inline("💰 Revenue", b"admin_revenue"),
+                    Button.inline("📈 Recent", b"admin_recent"),
+                ],
+                [
+                    Button.inline("⚠️ Errors", b"admin_errors"),
+                    Button.inline("📢 Broadcast", b"admin_broadcast"),
+                ],
                 [Button.inline("📊 View All Payments", b"admin_payments_0")],
-                [Button.inline("➕ Add Merchant", b"admin_add_merchant"), Button.inline("❌ Close", b"admin_close")]
-            ]
+                [
+                    Button.inline("➕ Add Merchant", b"admin_add_merchant"),
+                    Button.inline("❌ Close", b"admin_close"),
+                ],
+            ],
         )
     else:
         db = SessionLocal()
-        is_allowed = db.query(AllowedMerchant).filter(AllowedMerchant.telegram_id == str(event.sender_id)).first()
+        is_allowed = (
+            db.query(AllowedMerchant)
+            .filter(AllowedMerchant.telegram_id == str(event.sender_id))
+            .first()
+        )
         db.close()
 
         if not is_allowed:
-            await event.respond("❌ <b>Access Denied.</b>\n\nYou are not an authorized merchant. Please contact the administrator.", parse_mode='html')
+            await event.respond(
+                "❌ <b>Access Denied.</b>\n\nYou are not an authorized merchant. Please contact the administrator.",
+                parse_mode="html",
+            )
             return
+
+        try:
+            from telethon.tl.functions.bots import SetBotCommandsRequest
+            from telethon.tl.types import BotCommand, BotCommandScopePeer
+
+            user_cmds = [
+                BotCommand(command="start", description="Start the bot and link account"),
+                BotCommand(command="credentials", description="View your Merchant ID and Secrets"),
+                BotCommand(command="setcard", description="Set receiving card last 4 digits"),
+                BotCommand(command="unsetcard", description="Remove receiving card filter"),
+                BotCommand(command="disconnect", description="Disconnect your Telegram account"),
+            ]
+            await management_bot(
+                SetBotCommandsRequest(
+                    scope=BotCommandScopePeer(event.input_sender), lang_code="", commands=user_cmds
+                )
+            )
+        except Exception as e:
+            logger.error(f"Failed to set merchant commands menu: {e}")
 
         user_states[event.sender_id] = {"state": "AWAITING_PHONE"}
         await event.respond(
             "<b>👋 Welcome to Auto Payment Gateway!</b>\n\n"
             "Send your Uzbek phone number to link your account:\n"
             "Example: <code>+998901234567</code>",
-            parse_mode='html'
+            parse_mode="html",
         )
-@management_bot.on(events.CallbackQuery(pattern=b'admin_stats'))
+
+
+@management_bot.on(events.CallbackQuery(pattern=b"admin_stats"))
 async def callback_stats(event):
     if not is_admin(event.sender_id):
         return
@@ -234,16 +280,13 @@ async def callback_stats(event):
         "</blockquote>"
     )
 
-    reply_markup = {
-        "inline_keyboard": [
-            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
-        ]
-    }
+    reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
 
     await event.answer()
     await send_or_edit_rich_message(event, html, reply_markup)
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_merchants'))
+
+@management_bot.on(events.CallbackQuery(pattern=b"admin_merchants"))
 async def callback_merchants(event):
     if not is_admin(event.sender_id):
         return
@@ -257,23 +300,24 @@ async def callback_merchants(event):
     else:
         for m in merchants:
             status = "🟢" if m.is_connected else "🔴"
-            html += f'{status} <b>{m.phone_number}</b>\n<code>{m.id}</code>\n\n'
+            html += f"{status} <b>{m.phone_number}</b>\n<code>{m.id}</code>\n\n"
 
-
-    reply_markup = {
-        "inline_keyboard": [
-            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
-        ]
-    }
+    reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
     await event.answer()
     await send_or_edit_rich_message(event, html, reply_markup)
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_revenue'))
+
+@management_bot.on(events.CallbackQuery(pattern=b"admin_revenue"))
 async def callback_revenue(event):
     if not is_admin(event.sender_id):
         return
     db = SessionLocal()
-    revenue_tiyins = db.query(func.sum(PaymentIntent.expected_amount_tiyins)).filter(PaymentIntent.status == "PAID").scalar() or 0
+    revenue_tiyins = (
+        db.query(func.sum(PaymentIntent.expected_amount_tiyins))
+        .filter(PaymentIntent.status == "PAID")
+        .scalar()
+        or 0
+    )
     total_revenue = revenue_tiyins / 100
     db.close()
 
@@ -284,20 +328,19 @@ async def callback_revenue(event):
         "<i>(This is the sum of all successfully paid payment intents)</i>"
         "</blockquote>"
     )
-    reply_markup = {
-        "inline_keyboard": [
-            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
-        ]
-    }
+    reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
     await event.answer()
     await send_or_edit_rich_message(event, html, reply_markup)
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_recent'))
+
+@management_bot.on(events.CallbackQuery(pattern=b"admin_recent"))
 async def callback_recent(event):
     if not is_admin(event.sender_id):
         return
     db = SessionLocal()
-    recent = db.query(ProcessedPayment).order_by(ProcessedPayment.date_received.desc()).limit(5).all()
+    recent = (
+        db.query(ProcessedPayment).order_by(ProcessedPayment.date_received.desc()).limit(5).all()
+    )
     db.close()
 
     html = "<b>📈 Recent Transactions</b>\n"
@@ -310,20 +353,23 @@ async def callback_recent(event):
             html += f"<b>{amount:,.2f} UZS</b> via {r.source}\nDate: {r.date_received.strftime('%Y-%m-%d %H:%M')}\nStatus: {r.status}\n\n"
         html += "</blockquote>"
 
-    reply_markup = {
-        "inline_keyboard": [
-            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
-        ]
-    }
+    reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
     await event.answer()
     await send_or_edit_rich_message(event, html, reply_markup)
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_errors'))
+
+@management_bot.on(events.CallbackQuery(pattern=b"admin_errors"))
 async def callback_errors(event):
     if not is_admin(event.sender_id):
         return
     db = SessionLocal()
-    errors = db.query(UnparsedMessage).filter(UnparsedMessage.is_resolved == False).order_by(UnparsedMessage.date_received.desc()).limit(5).all()
+    errors = (
+        db.query(UnparsedMessage)
+        .filter(UnparsedMessage.is_resolved == False)
+        .order_by(UnparsedMessage.date_received.desc())
+        .limit(5)
+        .all()
+    )
     db.close()
 
     html = "<b>⚠️ Recent Unparsed Messages (Dead Letter Queue)</b>\n"
@@ -335,15 +381,12 @@ async def callback_errors(event):
             html += f"<b>Error:</b> {e.error_reason}\n<b>Date:</b> {e.date_received.strftime('%Y-%m-%d %H:%M')}\n<code>{e.raw_text[:50]}...</code>\n\n"
         html += "</blockquote>"
 
-    reply_markup = {
-        "inline_keyboard": [
-            [{"text": "⬅️ Back", "callback_data": "admin_back"}]
-        ]
-    }
+    reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
     await event.answer()
     await send_or_edit_rich_message(event, html, reply_markup)
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_broadcast'))
+
+@management_bot.on(events.CallbackQuery(pattern=b"admin_broadcast"))
 async def callback_broadcast(event):
     if not is_admin(event.sender_id):
         return
@@ -351,11 +394,12 @@ async def callback_broadcast(event):
     await event.edit(
         "<b>📢 Broadcast Mode Activated</b>\n\n"
         "Send the message you want to broadcast to ALL merchants now. (Or click Back to cancel)",
-        parse_mode='html',
-        buttons=[[Button.inline("⬅️ Cancel", b"admin_back")]]
+        parse_mode="html",
+        buttons=[[Button.inline("⬅️ Cancel", b"admin_back")]],
     )
 
-@management_bot.on(events.CallbackQuery(pattern=br'admin_payments_(\d+)'))
+
+@management_bot.on(events.CallbackQuery(pattern=rb"admin_payments_(\d+)"))
 async def callback_payments_table(event):
     if not is_admin(event.sender_id):
         return
@@ -365,21 +409,28 @@ async def callback_payments_table(event):
 
     db = SessionLocal()
     total_count = db.query(ProcessedPayment).count()
-    payments = db.query(ProcessedPayment, Merchant).join(Merchant, ProcessedPayment.merchant_id == Merchant.id).order_by(ProcessedPayment.date_received.desc()).offset(offset).limit(per_page).all()
+    payments = (
+        db.query(ProcessedPayment, Merchant)
+        .join(Merchant, ProcessedPayment.merchant_id == Merchant.id)
+        .order_by(ProcessedPayment.date_received.desc())
+        .offset(offset)
+        .limit(per_page)
+        .all()
+    )
     db.close()
 
-    html = f"<b>📊 Payments Database (Page {page+1})</b>\n\n<pre>"
+    html = f"<b>📊 Payments Database (Page {page + 1})</b>\n\n<pre>"
     html += f"{'Date':<6}|{'Phone':<9}|{'Amount':<6}|{'Src':<4}\n"
-    html += "-"*28 + "\n"
+    html += "-" * 28 + "\n"
 
     for p, m in payments:
         date_str = p.date_received.strftime("%m-%d")
         phone = m.phone_number[-9:] if (m.phone_number and len(m.phone_number) >= 9) else "Unknown"
         amt = p.amount_tiyins / 100
         if amt >= 1000000:
-            amt_str = f"{amt/1000000:.1f}M"
+            amt_str = f"{amt / 1000000:.1f}M"
         elif amt >= 1000:
-            amt_str = f"{amt/1000:.0f}k"
+            amt_str = f"{amt / 1000:.0f}k"
         else:
             amt_str = str(int(amt))
         src = p.source[:4] if p.source else "UNK"
@@ -394,9 +445,9 @@ async def callback_payments_table(event):
     inline_keyboard = []
     nav_row = []
     if page > 0:
-        nav_row.append({"text": "⬅️ Prev", "callback_data": f"admin_payments_{page-1}"})
+        nav_row.append({"text": "⬅️ Prev", "callback_data": f"admin_payments_{page - 1}"})
     if offset + per_page < total_count:
-        nav_row.append({"text": "Next ➡️", "callback_data": f"admin_payments_{page+1}"})
+        nav_row.append({"text": "Next ➡️", "callback_data": f"admin_payments_{page + 1}"})
 
     if nav_row:
         inline_keyboard.append(nav_row)
@@ -407,36 +458,55 @@ async def callback_payments_table(event):
     await event.answer()
     await send_or_edit_rich_message(event, html, reply_markup)
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_back'))
+
+@management_bot.on(events.CallbackQuery(pattern=b"admin_back"))
 async def callback_back(event):
     if not is_admin(event.sender_id):
         return
     await event.edit(
         "<b>🛡️ Admin Control Panel</b>",
-        parse_mode='html',
+        parse_mode="html",
         buttons=[
-            [Button.inline("📊 Stats", b"admin_stats"), Button.inline("👥 Merchants", b"admin_merchants")],
-            [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
-            [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
+            [
+                Button.inline("📊 Stats", b"admin_stats"),
+                Button.inline("👥 Merchants", b"admin_merchants"),
+            ],
+            [
+                Button.inline("💰 Revenue", b"admin_revenue"),
+                Button.inline("📈 Recent", b"admin_recent"),
+            ],
+            [
+                Button.inline("⚠️ Errors", b"admin_errors"),
+                Button.inline("📢 Broadcast", b"admin_broadcast"),
+            ],
             [Button.inline("📊 View All Payments", b"admin_payments_0")],
-            [Button.inline("➕ Add Merchant", b"admin_add_merchant"), Button.inline("❌ Close", b"admin_close")]
-        ]
+            [
+                Button.inline("➕ Add Merchant", b"admin_add_merchant"),
+                Button.inline("❌ Close", b"admin_close"),
+            ],
+        ],
     )
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_close'))
+
+@management_bot.on(events.CallbackQuery(pattern=b"admin_close"))
 async def callback_close(event):
     if not is_admin(event.sender_id):
         return
     await event.delete()
 
-@management_bot.on(events.CallbackQuery(pattern=b'admin_add_merchant'))
+
+@management_bot.on(events.CallbackQuery(pattern=b"admin_add_merchant"))
 async def callback_add_merchant(event):
     if not is_admin(event.sender_id):
         return
     user_states[event.sender_id] = {"state": "AWAITING_NEW_MERCHANT_ID"}
-    await event.respond("<b>➕ Add a New Merchant</b>\n\nPlease reply with the Telegram User ID of the new merchant.", parse_mode='html')
+    await event.respond(
+        "<b>➕ Add a New Merchant</b>\n\nPlease reply with the Telegram User ID of the new merchant.",
+        parse_mode="html",
+    )
 
-@management_bot.on(events.NewMessage(pattern='/credentials'))
+
+@management_bot.on(events.NewMessage(pattern="/credentials"))
 async def credentials_handler(event):
     db = SessionLocal()
     merchant_name = f"Merchant_{event.sender_id}"
@@ -453,76 +523,15 @@ async def credentials_handler(event):
         f"<b>🛡️ Webhook Secret:</b> <code>{merchant.webhook_secret}</code>\n"
         f"<b>🌐 Webhook URL:</b> <code>{merchant.webhook_url or 'Not Set'}</code>\n\n"
         f"⚠️ <i>Note: For security reasons, your API Key is mathematically hashed. We cannot show it to you. If you lost it, contact an admin to reset it.</i>",
-        parse_mode='html'
+        parse_mode="html",
     )
 
-@management_bot.on(events.NewMessage(pattern='/status'))
-async def status_handler(event):
-    db = SessionLocal()
-    merchant_name = f"Merchant_{event.sender_id}"
-    merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
-    db.close()
 
-    if merchant and merchant.is_connected:
-        await event.respond("✅ Your account is connected and actively listening for payments.\nUse /create <amount> to generate a payment intent.")
-    else:
-        await event.respond("ℹ️ Your account is not connected. Use /start to connect a new account.")
-
-@management_bot.on(events.NewMessage(pattern=r'/create (\d+)'))
-async def create_payment_handler(event):
-    amount_str = event.pattern_match.group(1).strip()
-    base_amount = float(amount_str)
-
-    db = SessionLocal()
-    merchant_name = f"Merchant_{event.sender_id}"
-    merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
-
-    if not merchant or not merchant.is_connected:
-        db.close()
-        await event.respond("❌ You must be connected to create a payment. Send /start")
-        return
-
-    service = PaymentService(db)
-    req = CreatePaymentRequest(base_amount=base_amount)
-    try:
-        intent = service.create_payment_intent(str(merchant.id), req)
-        display_amount = f"{intent.expected_amount / 100:,.2f} UZS"
-
-        await event.respond(
-            f"<b>💰 Payment Intent Created</b>\n\n"
-            f"Forward this to your customer:\n"
-            f"<code>Please pay exactly {display_amount} to card 8600...</code>\n\n"
-            f"Wait for the confirmation message here when paid.",
-            parse_mode='html'
-        )
-    except Exception as e:
-        logger.error(f"Failed to create intent: {e}")
-        await event.respond("❌ Failed to create payment intent due to high collision volume. Try again in a minute.")
-    finally:
-        db.close()
-
-@management_bot.on(events.NewMessage(pattern=r'/setwebhook (.+)'))
-async def setwebhook_handler(event):
-    url = event.pattern_match.group(1).strip()
-    if not url.startswith("https://"):
-        await event.respond("❌ Webhook URL must start with https://")
-        return
-    db = SessionLocal()
-    merchant_name = f"Merchant_{event.sender_id}"
-    merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
-    if merchant:
-        merchant.webhook_url = url
-        db.commit()
-        await event.respond(f"✅ Webhook URL set to: <code>{url}</code>", parse_mode='html')
-    else:
-        await event.respond("❌ Merchant not found.")
-    db.close()
-
-@management_bot.on(events.NewMessage(pattern=r'/setcard (.+)'))
+@management_bot.on(events.NewMessage(pattern=r"/setcard (.+)"))
 async def setcard_handler(event):
     mask = event.pattern_match.group(1).strip()
     # Mask is typically 4 digits, maybe preceded by a *, e.g. "*4183" or "4183"
-    mask_digits = mask.replace('*', '').strip()
+    mask_digits = mask.replace("*", "").strip()
     if not mask_digits.isdigit() or len(mask_digits) < 4:
         await event.respond("❌ Card mask should contain the last 4 digits (e.g. *4183 or 4183)")
         return
@@ -532,12 +541,15 @@ async def setcard_handler(event):
     if merchant:
         merchant.receiving_card_mask = mask
         db.commit()
-        await event.respond(f"✅ Receiving card mask set to: <code>{mask}</code>", parse_mode='html')
+        await event.respond(
+            f"✅ Receiving card mask set to: <code>{mask}</code>", parse_mode="html"
+        )
     else:
         await event.respond("❌ Merchant not found.")
     db.close()
 
-@management_bot.on(events.NewMessage(pattern='/unsetcard'))
+
+@management_bot.on(events.NewMessage(pattern="/unsetcard"))
 async def unsetcard_handler(event):
     db = SessionLocal()
     merchant_name = f"Merchant_{event.sender_id}"
@@ -545,12 +557,16 @@ async def unsetcard_handler(event):
     if merchant:
         merchant.receiving_card_mask = None
         db.commit()
-        await event.respond("✅ Receiving card mask removed. All matched payments will be processed without card verification.", parse_mode='html')
+        await event.respond(
+            "✅ Receiving card mask removed. All matched payments will be processed without card verification.",
+            parse_mode="html",
+        )
     else:
         await event.respond("❌ Merchant not found.")
     db.close()
 
-@management_bot.on(events.NewMessage(pattern='/disconnect'))
+
+@management_bot.on(events.NewMessage(pattern="/disconnect"))
 async def disconnect_handler(event):
     db = SessionLocal()
     merchant_name = f"Merchant_{event.sender_id}"
@@ -566,9 +582,11 @@ async def disconnect_handler(event):
         await event.respond("❌ You are not connected.")
     db.close()
 
+
 # ── Authentication State Machine ───────────────────────────────────────────
 
-@management_bot.on(events.NewMessage(func=lambda e: e.text and not e.text.startswith('/')))
+
+@management_bot.on(events.NewMessage(func=lambda e: e.text and not e.text.startswith("/")))
 async def message_handler(event):
     user_id = event.sender_id
     text = event.text.strip()
@@ -596,9 +614,7 @@ async def message_handler(event):
                 if m.name.startswith("Merchant_"):
                     m_id = int(m.name.split("_")[1])
                     await management_bot.send_message(
-                        m_id,
-                        f"📢 <b>Announcement from Admin</b>\n\n{text}",
-                        parse_mode='html'
+                        m_id, f"📢 <b>Announcement from Admin</b>\n\n{text}", parse_mode="html"
                     )
                     success_count += 1
             except Exception as e:
@@ -617,7 +633,9 @@ async def message_handler(event):
         existing = db.query(AllowedMerchant).filter(AllowedMerchant.telegram_id == text).first()
         if existing:
             db.close()
-            await event.respond(f"⚠️ User <code>{text}</code> is already whitelisted.", parse_mode='html')
+            await event.respond(
+                f"⚠️ User <code>{text}</code> is already whitelisted.", parse_mode="html"
+            )
             user_states.pop(user_id, None)
             return
 
@@ -627,12 +645,18 @@ async def message_handler(event):
         db.close()
 
         user_states.pop(user_id, None)
-        await event.respond(f"✅ User <code>{text}</code> has been whitelisted! They can now send /start to the bot.", parse_mode='html')
+        await event.respond(
+            f"✅ User <code>{text}</code> has been whitelisted! They can now send /start to the bot.",
+            parse_mode="html",
+        )
         return
 
     if current_state == "AWAITING_PHONE":
         if not text.startswith("+") or len(text) < 10:
-            await event.respond("Please send a valid phone number (e.g. <code>+998901234567</code>)", parse_mode='html')
+            await event.respond(
+                "Please send a valid phone number (e.g. <code>+998901234567</code>)",
+                parse_mode="html",
+            )
             return
 
         await event.respond("⏳ Sending Telegram login code...")
@@ -641,16 +665,18 @@ async def message_handler(event):
 
         try:
             sent = await temp_client.send_code_request(text)
-            state_data.update({
-                "phone": text,
-                "temp_client": temp_client,
-                "phone_code_hash": sent.phone_code_hash,
-                "state": "AWAITING_CODE"
-            })
+            state_data.update(
+                {
+                    "phone": text,
+                    "temp_client": temp_client,
+                    "phone_code_hash": sent.phone_code_hash,
+                    "state": "AWAITING_CODE",
+                }
+            )
             await event.respond(
                 "📩 Code sent! Reply with:\n<code>CODE 12345</code>\n\n"
                 "(Prefix with CODE so Telegram doesn't intercept it)",
-                parse_mode='html'
+                parse_mode="html",
             )
         except Exception as e:
             logger.error(f"send_code_request failed: {e}")
@@ -659,7 +685,9 @@ async def message_handler(event):
 
     elif current_state == "AWAITING_CODE":
         if not text.upper().startswith("CODE "):
-            await event.respond("Please reply with the code in format: <code>CODE 12345</code>", parse_mode='html')
+            await event.respond(
+                "Please reply with the code in format: <code>CODE 12345</code>", parse_mode="html"
+            )
             return
 
         code = text.split(" ", 1)[1].strip()
@@ -676,7 +704,7 @@ async def message_handler(event):
             await event.respond(
                 "🔐 Your account has <b>Two-Step Verification</b> enabled.\n"
                 "Please send your Telegram password now:",
-                parse_mode='html'
+                parse_mode="html",
             )
         except Exception as e:
             logger.error(f"sign_in failed: {e}")
@@ -710,7 +738,7 @@ async def _finish_login(event, temp_client: TelegramClient, phone: str, user_id:
         phone_number=phone,
         encrypted_session=encrypt_session(session_string),
         is_connected=True,
-        webhook_secret=webhook_secret
+        webhook_secret=webhook_secret,
     )
     db.add(new_merchant)
     db.commit()
@@ -729,6 +757,6 @@ async def _finish_login(event, temp_client: TelegramClient, phone: str, user_id:
         f"<b>🔑 API Key:</b> <code>{raw_api_key}</code>\n"
         f"<b>🛡️ Webhook Secret:</b> <code>{webhook_secret}</code>\n\n"
         f"⚠️ <b>Save these secrets now — they will never be shown again!</b>\n"
-        f"You can now use <code>/create 35000</code> to test a payment.",
-        parse_mode='html'
+        f"Your account is now ready to receive automated payment webhook notifications.",
+        parse_mode="html",
     )

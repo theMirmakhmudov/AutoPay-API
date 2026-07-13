@@ -19,13 +19,18 @@ from autopay.schemas.payload import (
 logger = logging.getLogger(__name__)
 
 # Fix #5: Max UZS difference allowed before we refuse and force user to wait
-MAX_COLLISION_OFFSET_TIYINS = 5000  # 50 UZS in tiyins (handles up to 50 concurrent identical payments)
+MAX_COLLISION_OFFSET_TIYINS = (
+    5000  # 50 UZS in tiyins (handles up to 50 concurrent identical payments)
+)
+
 
 class PaymentService:
     def __init__(self, db: Session):
         self.repo = PaymentRepository(db)
 
-    def create_payment_intent(self, merchant_id: str, request: CreatePaymentRequest) -> CreatePaymentResponse:
+    def create_payment_intent(
+        self, merchant_id: str, request: CreatePaymentRequest
+    ) -> CreatePaymentResponse:
         """
         Creates a payment intent with hybrid collision resolution.
         Fix #1: All amounts handled in tiyins (integer).
@@ -58,7 +63,7 @@ class PaymentService:
             merchant_id=merchant_id,
             base_amount_tiyins=base_tiyins,
             expected_amount_tiyins=expected_tiyins,
-            expires_at=expires_at
+            expires_at=expires_at,
         )
 
         return CreatePaymentResponse(
@@ -68,7 +73,7 @@ class PaymentService:
             has_collision=has_collision,
             force_wait=force_wait,
             expected_amount=float(intent.expected_amount_tiyins) / 100.0,
-            expires_at=intent.expires_at  # type: ignore
+            expires_at=intent.expires_at,  # type: ignore
         )
 
     def process_telegram_webhook(self, payload: TelegramWebhookPayload, merchant_id: str) -> dict:
@@ -78,6 +83,7 @@ class PaymentService:
         Fix #2: Webhook firing is async-safe.
         """
         from autopay.services.parsers.dispatcher import ParserDispatcher
+
         dispatcher = ParserDispatcher()
 
         # 1. Idempotency
@@ -93,7 +99,7 @@ class PaymentService:
                 message_id=payload.message_id,
                 chat_username=payload.chat_username,
                 raw_text=payload.raw_text,
-                error_reason="Regex matching failed"
+                error_reason="Regex matching failed",
             )
             return {"status": "ERROR", "message": "Parse failed. Saved to DLQ."}
 
@@ -109,7 +115,7 @@ class PaymentService:
             "receiver_card_info": parsed_data.get("receiver_card_info"),
             "source": parsed_data.get("source"),
             "transaction_date": payload.date_received,
-            "status": "UNMATCHED"
+            "status": "UNMATCHED",
         }
 
         # 4. Enforce receiving card mask if configured by merchant
@@ -117,16 +123,19 @@ class PaymentService:
         if merchant and merchant.receiving_card_mask:
             receiver_card = parsed_data.get("receiver_card_info")
             # Compare the last 4 digits (ignoring asterisks)
-            mask_digits = merchant.receiving_card_mask.replace('*', '').strip()
+            mask_digits = merchant.receiving_card_mask.replace("*", "").strip()
             if not receiver_card or not receiver_card.endswith(mask_digits):
                 self.repo.save_unparsed_message(
                     merchant_id=merchant_id,
                     message_id=payload.message_id,
                     chat_username=payload.chat_username,
                     raw_text=payload.raw_text,
-                    error_reason=f"Card mismatch: Expected {merchant.receiving_card_mask}, got {receiver_card}"
+                    error_reason=f"Card mismatch: Expected {merchant.receiving_card_mask}, got {receiver_card}",
                 )
-                return {"status": "ERROR", "message": f"Card mismatch: Expected {merchant.receiving_card_mask}"}
+                return {
+                    "status": "ERROR",
+                    "message": f"Card mismatch: Expected {merchant.receiving_card_mask}",
+                }
 
         # 5. Match to a pending intent — Fix #1: integer comparison, no float bugs
         active_intent = self.repo.get_active_intent_by_amount(merchant_id, amount_tiyins)
@@ -142,13 +151,20 @@ class PaymentService:
                 "payment": saved_payment,
                 "intent_id": active_intent.id,
                 "webhook_url": merchant.webhook_url if merchant else None,
-                "webhook_secret": merchant.webhook_secret if merchant else None
+                "webhook_secret": merchant.webhook_secret if merchant else None,
             }
         else:
             saved_payment = self.repo.save_payment(db_payment_data)
             return {"status": "PROCESSED_UNMATCHED", "payment": saved_payment}
 
-async def fire_webhook_with_retry(webhook_url: str, processed_payment_id: str, intent_id: str, amount_tiyins: int, secret: Optional[str] = None):
+
+async def fire_webhook_with_retry(
+    webhook_url: str,
+    processed_payment_id: str,
+    intent_id: str,
+    amount_tiyins: int,
+    secret: Optional[str] = None,
+):
     """
     Fix #2: Properly async webhook firing.
     Fix #10: Retries 3 times with exponential backoff (1s, 2s, 4s).
@@ -160,14 +176,14 @@ async def fire_webhook_with_retry(webhook_url: str, processed_payment_id: str, i
             "intent_id": intent_id,
             "payment_id": processed_payment_id,
             "amount": amount_tiyins / 100.0,
-            "status": "PAID"
-        }
+            "status": "PAID",
+        },
     }
 
     headers = {"Content-Type": "application/json"}
     if secret:
-        payload_bytes = json.dumps(payload, separators=(',', ':')).encode('utf-8')
-        signature = hmac.new(secret.encode('utf-8'), payload_bytes, hashlib.sha256).hexdigest()
+        payload_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        signature = hmac.new(secret.encode("utf-8"), payload_bytes, hashlib.sha256).hexdigest()
         headers["X-Webhook-Signature"] = signature
 
     async with httpx.AsyncClient() as client:
@@ -178,7 +194,7 @@ async def fire_webhook_with_retry(webhook_url: str, processed_payment_id: str, i
                 logger.info(f"Webhook delivered to {webhook_url} (attempt {attempt + 1})")
                 return
             except Exception as e:
-                wait = 2 ** attempt  # 1s, 2s, 4s
+                wait = 2**attempt  # 1s, 2s, 4s
                 logger.warning(f"Webhook attempt {attempt + 1} failed: {e}. Retrying in {wait}s...")
                 await asyncio.sleep(wait)
 

@@ -26,7 +26,10 @@ def test_encryption_functions(monkeypatch):
     from cryptography.fernet import Fernet
 
     import autopay.core.config
-    monkeypatch.setattr(autopay.core.config.settings, "ENCRYPTION_KEY", Fernet.generate_key().decode())
+
+    monkeypatch.setattr(
+        autopay.core.config.settings, "ENCRYPTION_KEY", Fernet.generate_key().decode()
+    )
 
     original = "test_session_string"
     encrypted = encrypt_session(original)
@@ -41,6 +44,7 @@ def test_encryption_functions(monkeypatch):
 
 def test_encryption_no_key(monkeypatch):
     import autopay.core.config
+
     monkeypatch.setattr(autopay.core.config.settings, "ENCRYPTION_KEY", "")
     with pytest.raises(RuntimeError, match="ENCRYPTION_KEY is not set"):
         _get_fernet()

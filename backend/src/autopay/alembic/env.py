@@ -25,7 +25,9 @@ from autopay.models.base import Base
 target_metadata = Base.metadata
 
 config = context.config
-config.set_main_option("sqlalchemy.url", os.environ.get("DATABASE_URL", "sqlite:///./payment_system.db"))
+config.set_main_option(
+    "sqlalchemy.url", os.environ.get("DATABASE_URL", "sqlite:///./payment_system.db")
+)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -71,9 +73,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

@@ -7,14 +7,14 @@ from autopay.schemas.merchant import MerchantView
 
 router = APIRouter()
 
+
 @router.get(
     "/me",
     response_model=BaseResponse[MerchantView],
     summary="View my credentials",
-    description="Returns your Merchant ID, API Key, Telegram connection status, and configured webhook URL."
+    description="Returns your Merchant ID, API Key, Telegram connection status, and configured webhook URL.",
 )
 def get_my_credentials(merchant: Merchant = Depends(get_current_merchant)):
     return create_success_response(
-        data=MerchantView.model_validate(merchant),
-        message="Credentials fetched"
+        data=MerchantView.model_validate(merchant), message="Credentials fetched"
     )

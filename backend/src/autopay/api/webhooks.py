@@ -19,19 +19,20 @@ router = APIRouter()
         "Called by the Telegram Userbot when a new payment notification arrives. "
         "Pass merchant_id as a query parameter so the platform knows which merchant "
         "this notification belongs to. Authentication is via the X-API-Key header."
-    )
+    ),
 )
 def receive_telegram_webhook(
     payload: TelegramWebhookPayload,
-    merchant_id: str = Query(..., description="The merchant's unique ID to route this notification correctly"),
+    merchant_id: str = Query(
+        ..., description="The merchant's unique ID to route this notification correctly"
+    ),
     db: Session = Depends(get_db),
-    merchant: Merchant = Depends(get_current_merchant)
+    merchant: Merchant = Depends(get_current_merchant),
 ):
     # Ensure the merchant_id in the query param matches the authenticated merchant
     if merchant.id != merchant_id:
         return create_error_response(
-            message="merchant_id does not match your API key",
-            error_code="MERCHANT_MISMATCH"
+            message="merchant_id does not match your API key", error_code="MERCHANT_MISMATCH"
         )
 
     service = PaymentService(db)
@@ -47,15 +48,13 @@ def receive_telegram_webhook(
                 "amount": payment.amount,
                 "source": payment.source,
             },
-            message="Payment matched!" if matched else "Payment processed but not yet matched to any order"
+            message="Payment matched!"
+            if matched
+            else "Payment processed but not yet matched to any order",
         )
     elif result["status"] == "DUPLICATE":
         return create_success_response(
-            data={"message_id": payload.message_id},
-            message="Duplicate — already processed"
+            data={"message_id": payload.message_id}, message="Duplicate — already processed"
         )
     else:
-        return create_error_response(
-            message=result["message"],
-            error_code="PARSE_ERROR"
-        )
+        return create_error_response(message=result["message"], error_code="PARSE_ERROR")

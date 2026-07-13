@@ -8,6 +8,7 @@ class HumoParser(BaseParser):
     """
     Parser for @humocardbot messages.
     """
+
     # Pre-compile regex patterns for performance and better maintainability
     _ACTION_PATTERN = re.compile(r"to'ldirish", re.IGNORECASE)
     _AMOUNT_PATTERN = re.compile(r"➕\s*([\d\s.,]+)\s*UZS", re.IGNORECASE)
@@ -38,5 +39,5 @@ class HumoParser(BaseParser):
             "currency": "UZS",
             "card_type": card_type,
             "receiver_card_info": receiver_card_info,
-            "source": "HUMO_BOT"
+            "source": "HUMO_BOT",
         }

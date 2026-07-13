@@ -16,11 +16,9 @@ if sentry_dsn:
         traces_sample_rate=1.0,
     )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
+
 
 async def cleanup_expired_intents():
     """
@@ -42,6 +40,7 @@ async def cleanup_expired_intents():
         except Exception as e:
             logger.error(f"Cleanup task error: {e}")
 
+
 async def run_health_checks(manager: ClientManager):
     """
     Periodically checks the health of all active Telethon userbots.
@@ -53,6 +52,7 @@ async def run_health_checks(manager: ClientManager):
             await manager.health_check_clients()
         except Exception as e:
             logger.error(f"Health check task error: {e}")
+
 
 async def main():
     logger.info("Starting Managed Telethon Worker Service...")
@@ -75,15 +75,17 @@ async def main():
             BotCommand(command="status", description="Check connection status"),
             BotCommand(command="create", description="Generate a payment intent"),
             BotCommand(command="setwebhook", description="Set webhook URL"),
-            BotCommand(command="disconnect", description="Disconnect your Telegram account")
+            BotCommand(command="disconnect", description="Disconnect your Telegram account"),
         ]
         admin_cmds = [
             BotCommand(command="start", description="Open Admin Control Panel"),
             BotCommand(command="stats", description="View system statistics"),
             BotCommand(command="merchants", description="List all connected merchants"),
-            BotCommand(command="ban", description="Ban a merchant")
+            BotCommand(command="ban", description="Ban a merchant"),
         ]
-        await management_bot(SetBotCommandsRequest(scope=BotCommandScopeDefault(), lang_code='', commands=user_cmds))
+        await management_bot(
+            SetBotCommandsRequest(scope=BotCommandScopeDefault(), lang_code="", commands=user_cmds)
+        )
     except Exception as e:
         logger.error(f"Failed to set bot commands: {e}")
 
@@ -101,6 +103,7 @@ async def main():
 
     # 3. Run indefinitely
     await management_bot.run_until_disconnected()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -33,14 +33,14 @@ router = APIRouter()
     "/",
     response_model=BaseResponse[CreatePaymentResponse],
     summary="Create a new payment",
-    description="Creates a new payment intent. Returns the exact amount the user must transfer and the payment_id to poll for status."
+    description="Creates a new payment intent. Returns the exact amount the user must transfer and the payment_id to poll for status.",
 )
 @limiter.limit("5/second")
 def create_payment(
     request: Request,
     payload: CreatePaymentRequest,
     db: Session = Depends(get_db),
-    merchant: Merchant = Depends(get_current_merchant)
+    merchant: Merchant = Depends(get_current_merchant),
 ):
     service = PaymentService(db)
     response = service.create_payment_intent(merchant.id, payload)
@@ -51,14 +51,14 @@ def create_payment(
     "/status",
     response_model=BaseResponse[PaymentStatusResponse],
     summary="Check payment status",
-    description="Poll this endpoint to check if the payment has been received. Status: PENDING | PAID | EXPIRED | CANCELLED"
+    description="Poll this endpoint to check if the payment has been received. Status: PENDING | PAID | EXPIRED | CANCELLED",
 )
 @limiter.limit("5/second")
 def check_status(
     request: Request,
     payment_id: str = Query(..., description="The payment_id returned from POST /payments"),
     db: Session = Depends(get_db),
-    merchant: Merchant = Depends(get_current_merchant)
+    merchant: Merchant = Depends(get_current_merchant),
 ):
     repo = PaymentRepository(db)
     payment = repo.get_intent(payment_id, merchant.id)
@@ -70,9 +70,9 @@ def check_status(
             payment_id=payment.id,
             status=payment.status,
             expected_amount=payment.expected_amount,
-            expires_at=payment.expires_at
+            expires_at=payment.expires_at,
         ),
-        message="Status fetched"
+        message="Status fetched",
     )
 
 
@@ -80,14 +80,14 @@ def check_status(
     "/cancel",
     response_model=BaseResponse[dict],
     summary="Cancel a payment",
-    description="Cancels a PENDING payment and frees up the locked amount."
+    description="Cancels a PENDING payment and frees up the locked amount.",
 )
 @limiter.limit("5/second")
 def cancel_payment(
     request: Request,
     payment_id: str = Query(..., description="The payment_id to cancel"),
     db: Session = Depends(get_db),
-    merchant: Merchant = Depends(get_current_merchant)
+    merchant: Merchant = Depends(get_current_merchant),
 ):
     repo = PaymentRepository(db)
     payment = repo.get_intent(payment_id, merchant.id)
@@ -101,9 +101,9 @@ def cancel_payment(
     payment.status = "CANCELLED"
     db.commit()
     return create_success_response(
-        data={"payment_id": payment_id, "status": "CANCELLED"},
-        message="Payment cancelled"
+        data={"payment_id": payment_id, "status": "CANCELLED"}, message="Payment cancelled"
     )
+
 
 @router.websocket("/ws/{payment_id}")
 async def websocket_payment_status(websocket: WebSocket, payment_id: str):
@@ -123,7 +123,7 @@ async def websocket_payment_status(websocket: WebSocket, payment_id: str):
             if payload == payment_id:
                 queue.put_nowait(payload)
 
-        await conn.add_listener('payment_updates', handle_notify)
+        await conn.add_listener("payment_updates", handle_notify)
 
         while True:
             # Race receiving a websocket message (to detect disconnects) vs receiving a postgres notification
@@ -131,8 +131,7 @@ async def websocket_payment_status(websocket: WebSocket, payment_id: str):
             q_task = asyncio.create_task(queue.get())
 
             done, pending = await asyncio.wait(
-                [ws_task, q_task],
-                return_when=asyncio.FIRST_COMPLETED
+                [ws_task, q_task], return_when=asyncio.FIRST_COMPLETED
             )
 
             for task in pending:
@@ -154,8 +153,7 @@ async def websocket_payment_status(websocket: WebSocket, payment_id: str):
     finally:
         if conn:
             try:
-                await conn.remove_listener('payment_updates', handle_notify)
+                await conn.remove_listener("payment_updates", handle_notify)
                 await conn.close()
             except Exception:
                 pass
-

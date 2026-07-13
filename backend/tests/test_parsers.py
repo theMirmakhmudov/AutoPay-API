@@ -6,11 +6,14 @@ from autopay.services.parsers.payme_parser import PaymeParser
 from autopay.services.parsers.uzcard_parser import UzcardParser
 
 
-@pytest.mark.parametrize("message_text,expected_tiyins", [
-    ("🎉 To'ldirish\n➕ 35.000,00 UZS\n💳 VISA *4183", 3500000),
-    ("🎉 To'ldirish\n➕ 1.234,56 UZS\n💳 VISA *4183", 123456),
-    ("Invalid message without plus", None),
-])
+@pytest.mark.parametrize(
+    "message_text,expected_tiyins",
+    [
+        ("🎉 To'ldirish\n➕ 35.000,00 UZS\n💳 VISA *4183", 3500000),
+        ("🎉 To'ldirish\n➕ 1.234,56 UZS\n💳 VISA *4183", 123456),
+        ("Invalid message without plus", None),
+    ],
+)
 def test_click_parser(message_text, expected_tiyins):
     parser = ClickParser()
     result = parser.parse(message_text)
@@ -19,11 +22,15 @@ def test_click_parser(message_text, expected_tiyins):
     else:
         assert result["amount_tiyins"] == expected_tiyins
 
-@pytest.mark.parametrize("message_text,expected_tiyins", [
-    ("Payme\n➕ 35 000,00 UZS", 3500000),
-    ("PAYME transfer\n➕ 1 234,56 UZS", 123456),
-    ("Invalid payme string without plus", None),
-])
+
+@pytest.mark.parametrize(
+    "message_text,expected_tiyins",
+    [
+        ("Payme\n➕ 35 000,00 UZS", 3500000),
+        ("PAYME transfer\n➕ 1 234,56 UZS", 123456),
+        ("Invalid payme string without plus", None),
+    ],
+)
 def test_payme_parser(message_text, expected_tiyins):
     parser = PaymeParser()
     result = parser.parse(message_text)
@@ -32,11 +39,15 @@ def test_payme_parser(message_text, expected_tiyins):
     else:
         assert result["amount_tiyins"] == expected_tiyins
 
-@pytest.mark.parametrize("message_text,expected_tiyins", [
-    ("➕ 35000.00 UZS\n8612 **** **** 4183", 3500000),
-    ("➕ 1234.56 UZS", 123456),
-    ("Some random text without plus", None),
-])
+
+@pytest.mark.parametrize(
+    "message_text,expected_tiyins",
+    [
+        ("➕ 35000.00 UZS\n8612 **** **** 4183", 3500000),
+        ("➕ 1234.56 UZS", 123456),
+        ("Some random text without plus", None),
+    ],
+)
 def test_uzcard_parser(message_text, expected_tiyins):
     parser = UzcardParser()
     result = parser.parse(message_text)
@@ -45,12 +56,16 @@ def test_uzcard_parser(message_text, expected_tiyins):
     else:
         assert result["amount_tiyins"] == expected_tiyins
 
-@pytest.mark.parametrize("message_text,expected_tiyins", [
-    ("🎉 To'ldirish\n➕ 35000 UZS\nHUMO *1234", 3500000),
-    ("To'ldirish ➕ 1234.56 UZS\nHUMO *1234", 123456),
-    ("➕ 35000 UZS\nHUMO *1234 (Missing word)", None),
-    ("Invalid humo text without plus", None),
-])
+
+@pytest.mark.parametrize(
+    "message_text,expected_tiyins",
+    [
+        ("🎉 To'ldirish\n➕ 35000 UZS\nHUMO *1234", 3500000),
+        ("To'ldirish ➕ 1234.56 UZS\nHUMO *1234", 123456),
+        ("➕ 35000 UZS\nHUMO *1234 (Missing word)", None),
+        ("Invalid humo text without plus", None),
+    ],
+)
 def test_humo_parser(message_text, expected_tiyins):
     parser = HumoParser()
     result = parser.parse(message_text)
@@ -58,6 +73,7 @@ def test_humo_parser(message_text, expected_tiyins):
         assert result is None
     else:
         assert result["amount_tiyins"] == expected_tiyins
+
 
 from autopay.services.parsers.base_parser import BaseParser
 from autopay.services.parsers.cardxabar_parser import CardXabarParser
@@ -73,12 +89,14 @@ def test_base_parser_extract_amount():
     assert parser.extract_amount("35000") == 3500000
     assert parser.extract_amount("invalid") == 0
 
+
 def test_base_parser_not_implemented():
     parser = BaseParser()
     try:
         parser.parse("test")
     except NotImplementedError:
         pass
+
 
 def test_generic_parser():
     parser = GenericParser()
@@ -103,6 +121,7 @@ def test_generic_parser():
     result_invalid = parser.parse(msg_invalid)
     assert result_invalid is None
 
+
 def test_dispatcher():
     dispatcher = ParserDispatcher()
 
@@ -115,6 +134,7 @@ def test_dispatcher():
 
     # Test no match
     assert dispatcher.dispatch("unknown_bot", "blah blah") is None
+
 
 def test_cardxabar_parser():
     parser = CardXabarParser()

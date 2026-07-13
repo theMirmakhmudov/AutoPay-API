@@ -15,6 +15,7 @@ from autopay.services.payment_service import PaymentService, fire_webhook_with_r
 
 logger = logging.getLogger(__name__)
 
+
 class ClientManager:
     def __init__(self, api_id: int, api_hash: str):
         self.api_id = api_id
@@ -23,10 +24,11 @@ class ClientManager:
 
     async def start_all_clients(self):
         db = SessionLocal()
-        merchants = db.query(Merchant).filter(
-            Merchant.is_connected == True,
-            Merchant.encrypted_session != None
-        ).all()
+        merchants = (
+            db.query(Merchant)
+            .filter(Merchant.is_connected == True, Merchant.encrypted_session != None)
+            .all()
+        )
         db.close()
         for merchant in merchants:
             await self.start_client(merchant)
@@ -44,7 +46,7 @@ class ClientManager:
         @client.on(events.NewMessage(incoming=True))
         async def handler(event):
             sender = await event.get_sender()
-            sender_username = (getattr(sender, 'username', None) or "").lower()
+            sender_username = (getattr(sender, "username", None) or "").lower()
 
             if sender_username not in KNOWN_BOT_USERNAMES:
                 return
@@ -72,7 +74,7 @@ class ClientManager:
                 message_id=event.id,
                 chat_username=sender_username,
                 raw_text=event.raw_text,
-                date_received=event.date
+                date_received=event.date,
             )
 
             service = PaymentService(db)
@@ -84,19 +86,25 @@ class ClientManager:
                 webhook_url = result.get("webhook_url")
                 webhook_secret = result.get("webhook_secret")
 
-                logger.info(f"[{merchant_id}] MATCHED intent={intent_id} amount={payment.amount} UZS")
+                logger.info(
+                    f"[{merchant_id}] MATCHED intent={intent_id} amount={payment.amount} UZS"
+                )
 
                 # Fix #2 + #10: Properly async, 3-attempt retry
                 if webhook_url:
                     asyncio.create_task(
-                        fire_webhook_with_retry(webhook_url, payment.id, intent_id, payment.amount, webhook_secret)
+                        fire_webhook_with_retry(
+                            webhook_url, payment.id, intent_id, payment.amount, webhook_secret
+                        )
                     )
 
                 # Webhook fires silently. We don't spam the merchant bot anymore.
                 pass
 
             elif result["status"] == "PROCESSED_UNMATCHED":
-                logger.warning(f"[{merchant_id}] Unmatched payment — no open intent for this amount")
+                logger.warning(
+                    f"[{merchant_id}] Unmatched payment — no open intent for this amount"
+                )
 
         except Exception as e:
             logger.error(f"Error handling message for {merchant_id}: {e}", exc_info=True)
@@ -106,7 +114,10 @@ class ClientManager:
     async def health_check_clients(self):
         db = SessionLocal()
         from autopay.worker.bot import management_bot
-        admin_ids = [int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()]
+
+        admin_ids = [
+            int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()
+        ]
 
         # We must copy keys because we might modify the dict during iteration
         for merchant_id, client in list(self.clients.items()):
@@ -126,15 +137,19 @@ class ClientManager:
                         telegram_user_id = int(merchant.name.split("_")[1])
                         alert_msg = "⚠️ *CRITICAL ALERT* ⚠️\n\nYour Telegram session was disconnected or revoked! The bot can no longer read incoming payments.\n\nPlease use `/login` to reconnect your account immediately."
                         try:
-                            await management_bot.send_message(telegram_user_id, alert_msg, parse_mode='md')
+                            await management_bot.send_message(
+                                telegram_user_id, alert_msg, parse_mode="md"
+                            )
                         except Exception as e:
-                            logger.error(f"Failed to notify merchant {merchant_id} of disconnect: {e}")
+                            logger.error(
+                                f"Failed to notify merchant {merchant_id} of disconnect: {e}"
+                            )
 
                     # Notify admins
                     admin_msg = f"🚨 *Merchant Disconnected*\n\nMerchant ID: `{merchant.id}`\nPhone: `{merchant.phone_number}`\n\nThe userbot session was terminated. They have been automatically marked as disconnected."
                     for admin_id in admin_ids:
                         try:
-                            await management_bot.send_message(admin_id, admin_msg, parse_mode='md')
+                            await management_bot.send_message(admin_id, admin_msg, parse_mode="md")
                         except Exception as e:
                             pass
 

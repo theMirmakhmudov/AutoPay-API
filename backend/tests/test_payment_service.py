@@ -18,6 +18,7 @@ def test_create_payment_no_collision(db_session, test_merchant):
     assert response.base_amount == 35000.0
     assert response.expected_amount == 35000.0
 
+
 def test_create_payment_with_collision(db_session, test_merchant):
     service = PaymentService(db_session)
     request = CreatePaymentRequest(base_amount=35000.0)
@@ -31,6 +32,7 @@ def test_create_payment_with_collision(db_session, test_merchant):
     assert r2.has_collision is True
     assert r2.force_wait is False
     assert r2.expected_amount == 35001.0  # + 100 tiyins (+ 1.00 UZS)
+
 
 def test_create_payment_collision_cap(db_session, test_merchant):
     service = PaymentService(db_session)
@@ -53,6 +55,7 @@ def test_create_payment_collision_cap(db_session, test_merchant):
     # Let's adjust this test.
     # Instead of creating 1001 intents, we can just test that the math is isolated per base_amount.
 
+
 def test_payment_idempotency_different_base(db_session, test_merchant):
     service = PaymentService(db_session)
 
@@ -62,6 +65,7 @@ def test_payment_idempotency_different_base(db_session, test_merchant):
     assert r1.expected_amount == 35000.0
     assert r2.expected_amount == 40000.0
     assert r2.has_collision is False
+
 
 from unittest.mock import AsyncMock, patch
 
@@ -78,7 +82,7 @@ async def test_fire_webhook_signature():
             processed_payment_id="1",
             intent_id="intent_123",
             amount_tiyins=3500000,
-            secret="mysecret"
+            secret="mysecret",
         )
 
         mock_post.assert_called_once()

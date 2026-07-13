@@ -10,15 +10,18 @@ from .base import Base
 def generate_uuid():
     return str(uuid.uuid4())
 
+
 class AllowedMerchant(Base):
     __tablename__ = "allowed_merchants"
     telegram_id = Column(String, primary_key=True)
     added_at = Column(DateTime, default=datetime.utcnow)
 
+
 class Merchant(Base):
     """
     A tenant on the SaaS platform.
     """
+
     __tablename__ = "merchants"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -44,10 +47,12 @@ class Merchant(Base):
     payments = relationship("ProcessedPayment", back_populates="merchant")
     intents = relationship("PaymentIntent", back_populates="merchant")
 
+
 class PaymentIntent(Base):
     """
     An invoice waiting to be paid. Amounts stored in TIYINS (integer) to avoid float bugs.
     """
+
     __tablename__ = "payment_intents"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -77,11 +82,13 @@ class PaymentIntent(Base):
     def expected_amount(self) -> float:
         return float(self.expected_amount_tiyins) / 100.0 if self.expected_amount_tiyins else 0.0
 
+
 class ProcessedPayment(Base):
     """
     A raw transaction successfully parsed from the Telegram Userbot.
     Amounts stored in TIYINS.
     """
+
     __tablename__ = "processed_payments"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -107,10 +114,12 @@ class ProcessedPayment(Base):
     def amount(self) -> float:
         return float(self.amount_tiyins) / 100.0 if self.amount_tiyins else 0.0
 
+
 class UnparsedMessage(Base):
     """
     Dead Letter Queue for failed regex parsing.
     """
+
     __tablename__ = "unparsed_messages"
 
     id = Column(Integer, primary_key=True, index=True)

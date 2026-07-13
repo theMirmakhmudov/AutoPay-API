@@ -28,7 +28,7 @@ def test_mark_intent_paid_sqlite_fallback(db_session, test_merchant):
         merchant_id=test_merchant.id,
         base_amount_tiyins=1000,
         expected_amount_tiyins=1000,
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5)
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
     )
     repo.mark_intent_paid(intent, payment_id=999)
     assert intent.status == "PAID"
@@ -42,13 +42,13 @@ def test_expire_old_intents(db_session, test_merchant):
         merchant_id=test_merchant.id,
         base_amount_tiyins=1000,
         expected_amount_tiyins=1000,
-        expires_at=datetime.now(timezone.utc) - timedelta(minutes=5) # past
+        expires_at=datetime.now(timezone.utc) - timedelta(minutes=5),  # past
     )
     intent_active = repo.create_intent(
         merchant_id=test_merchant.id,
         base_amount_tiyins=2000,
         expected_amount_tiyins=2000,
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5) # future
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),  # future
     )
 
     expired_count = repo.expire_old_intents()
@@ -72,7 +72,7 @@ def test_payment_exists(db_session, test_merchant):
         amount_tiyins=1000,
         card_type="VISA",
         source="test",
-        date_received=datetime.now(timezone.utc)
+        date_received=datetime.now(timezone.utc),
     )
     db_session.add(payment)
     db_session.commit()
@@ -88,7 +88,7 @@ def test_save_unparsed_message(db_session, test_merchant):
         chat_username="test_chat",
         raw_text="raw_text",
         error_reason="parse error",
-        merchant_id=test_merchant.id
+        merchant_id=test_merchant.id,
     )
     assert unparsed.message_id == 2
     # Check that payment_exists returns True for unparsed as well

@@ -21,6 +21,7 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 def override_get_db():
     try:
         db = TestingSessionLocal()
@@ -28,7 +29,9 @@ def override_get_db():
     finally:
         db.close()
 
+
 app.dependency_overrides[get_db] = override_get_db
+
 
 @pytest.fixture(scope="function")
 def db_session():
@@ -40,14 +43,12 @@ def db_session():
     # Drop tables after test
     Base.metadata.drop_all(bind=engine)
 
+
 @pytest.fixture(scope="function")
 def test_merchant(db_session):
     raw_api_key, api_key_hash = generate_api_key()
     merchant = Merchant(
-        id="test_merchant_id",
-        name="Test Merchant",
-        api_key_hash=api_key_hash,
-        is_connected=True
+        id="test_merchant_id", name="Test Merchant", api_key_hash=api_key_hash, is_connected=True
     )
     db_session.add(merchant)
     db_session.commit()
@@ -57,10 +58,12 @@ def test_merchant(db_session):
     merchant.raw_api_key = raw_api_key
     return merchant
 
+
 @pytest.fixture(scope="function")
 def client(test_merchant):
     # Disable rate limiter for tests
     from autopay.app import limiter
+
     limiter.enabled = False
 
     # Override auth to use our test merchant

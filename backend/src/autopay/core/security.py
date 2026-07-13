@@ -8,9 +8,9 @@ from autopay.models.payment import Merchant
 
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
+
 def get_current_merchant(
-    api_key: str = Security(api_key_header),
-    db: Session = Depends(get_db)
+    api_key: str = Security(api_key_header), db: Session = Depends(get_db)
 ) -> Merchant:
     """
     Validates the API key and returns the authenticated Merchant.
@@ -18,8 +18,7 @@ def get_current_merchant(
     """
     if not api_key:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Missing X-API-Key header"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Missing X-API-Key header"
         )
 
     # Hash the incoming key and look up the hash in the DB
@@ -27,8 +26,5 @@ def get_current_merchant(
     merchant = db.query(Merchant).filter(Merchant.api_key_hash == key_hash).first()
 
     if not merchant:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid API Key"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API Key")
     return merchant

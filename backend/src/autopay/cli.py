@@ -25,7 +25,7 @@ def init_command(args):
     if os.path.exists(".env"):
         print("⚠️ A .env file already exists in the current directory.")
         overwrite = input("Do you want to overwrite it? (y/N): ")
-        if overwrite.lower() != 'y':
+        if overwrite.lower() != "y":
             print("Aborted.")
             return
 
@@ -37,9 +37,11 @@ def init_command(args):
         print("Admin ID is required! Aborting.")
         return
 
-    generate_key = input("2. Do you want to automatically generate a secure API_KEY? (Y/n): ").strip().lower()
+    generate_key = (
+        input("2. Do you want to automatically generate a secure API_KEY? (Y/n): ").strip().lower()
+    )
 
-    if generate_key == 'n':
+    if generate_key == "n":
         api_key = input("   Enter your custom API_KEY: ").strip()
     else:
         api_key = secrets.token_hex(32)
@@ -67,7 +69,7 @@ def deploy_command(args):
     if os.path.exists("docker-compose.yml"):
         print("⚠️ A docker-compose.yml file already exists in the current directory.")
         overwrite = input("Do you want to run the wizard again and overwrite it? (y/N): ")
-        if overwrite.lower() != 'y':
+        if overwrite.lower() != "y":
             print("Aborted. If you just want to update, run: autopay update")
             return
 
@@ -91,9 +93,9 @@ def deploy_command(args):
         user_input = input(display_prompt).strip()
         return user_input if user_input else default_val
 
-    print("\n" + "═"*70)
+    print("\n" + "═" * 70)
     print(" 🛠️  STEP 1: TELEGRAM BOT CONFIGURATION")
-    print("═"*70)
+    print("═" * 70)
     print("Welcome to the Autopay Deploy Wizard. We'll set up your environment step-by-step.\n")
 
     print("ℹ️ Get your API_ID and API_HASH from https://my.telegram.org (App API ID)")
@@ -103,17 +105,21 @@ def deploy_command(args):
     api_hash = prompt_env("👉 TELEGRAM_API_HASH (e.g. abc123def...)", "TELEGRAM_API_HASH")
 
     print("\nℹ️ Get your Bot Token by creating a new bot with @BotFather on Telegram")
-    bot_token = prompt_env("👉 MANAGEMENT_BOT_TOKEN (e.g. 12345:ABC-DEF...)", "MANAGEMENT_BOT_TOKEN")
+    bot_token = prompt_env(
+        "👉 MANAGEMENT_BOT_TOKEN (e.g. 12345:ABC-DEF...)", "MANAGEMENT_BOT_TOKEN"
+    )
 
     print("\nℹ️ Your personal Telegram User ID (e.g. from @userinfobot) to access the Admin Panel")
     admin_id = prompt_env("👉 ADMIN_TELEGRAM_IDS (e.g. 987654321)", "ADMIN_TELEGRAM_IDS")
 
-    print("\n" + "═"*70)
+    print("\n" + "═" * 70)
     print(" ☁️  STEP 2: CLOUDFLARE TUNNEL (Remotely Managed)")
-    print("═"*70)
-    domain = input("👉 What is your full domain name? (e.g. api.cerifynow.uz) [leave empty to skip]: ").strip()
+    print("═" * 70)
+    domain = input(
+        "👉 What is your full domain name? (e.g. api.cerifynow.uz) [leave empty to skip]: "
+    ).strip()
     # Parse domain dynamically
-    parts = domain.split('.')
+    parts = domain.split(".")
     if len(parts) > 2:
         subdomain = parts[0]
         root_domain = ".".join(parts[1:])
@@ -134,9 +140,12 @@ def deploy_command(args):
         print("       - Service URL          : autopay_nginx:80")
         print("  6. Click 'Save hostname'\n")
 
-    tunnel_token = prompt_env("👉 Paste your Cloudflare Tunnel Token (eyJh...)", "CLOUDFLARE_TUNNEL_TOKEN")
+    tunnel_token = prompt_env(
+        "👉 Paste your Cloudflare Tunnel Token (eyJh...)", "CLOUDFLARE_TUNNEL_TOKEN"
+    )
 
     from cryptography.fernet import Fernet
+
     encryption_key = Fernet.generate_key().decode()
 
     compose_template = """version: '3.8'
@@ -227,8 +236,6 @@ http {
 }
 """
 
-
-
     env_template = f"""TELEGRAM_API_ID={api_id}
 TELEGRAM_API_HASH={api_hash}
 MANAGEMENT_BOT_TOKEN={bot_token}
@@ -250,14 +257,18 @@ CLOUDFLARE_TUNNEL_TOKEN={tunnel_token}
             f.write(env_template)
     else:
         # Prompt to overwrite .env
-        overwrite_env = input("⚠️ A .env file already exists. Do you want to overwrite it with these new credentials? (y/N): ")
-        if overwrite_env.lower() == 'y':
+        overwrite_env = input(
+            "⚠️ A .env file already exists. Do you want to overwrite it with these new credentials? (y/N): "
+        )
+        if overwrite_env.lower() == "y":
             with open(".env", "w") as f:
                 f.write(env_template)
 
     print("\n✅ Production deployment files generated successfully!")
     print("\n⚠️ IMPORTANT: You are using a Remotely Managed Cloudflare Tunnel.")
-    print(f"Make sure you added the Public Hostname in your Cloudflare dashboard for {domain} pointing to http://autopay_nginx:80")
+    print(
+        f"Make sure you added the Public Hostname in your Cloudflare dashboard for {domain} pointing to http://autopay_nginx:80"
+    )
     print("\nTo start your bot in production, run:")
     print("  docker compose up -d --force-recreate")
 
@@ -278,7 +289,9 @@ def start_command(args):
     print("🚀 Starting AutopayBot Full System...")
 
     # Run both commands as subprocesses
-    web_process = subprocess.Popen([sys.executable, "-m", "autopay", "web", "--host", args.host, "--port", str(args.port)])
+    web_process = subprocess.Popen(
+        [sys.executable, "-m", "autopay", "web", "--host", args.host, "--port", str(args.port)]
+    )
     worker_process = subprocess.Popen([sys.executable, "-m", "autopay", "worker"])
 
     try:
@@ -324,10 +337,14 @@ def main():
     parser_init = subparsers.add_parser("init", help="Interactive .env configuration wizard")
 
     # deploy
-    parser_deploy = subparsers.add_parser("deploy", help="Generate docker-compose.yml for production deployment")
+    parser_deploy = subparsers.add_parser(
+        "deploy", help="Generate docker-compose.yml for production deployment"
+    )
 
     # start
-    parser_start = subparsers.add_parser("start", help="Boot both Web API and Background Worker simultaneously")
+    parser_start = subparsers.add_parser(
+        "start", help="Boot both Web API and Background Worker simultaneously"
+    )
     parser_start.add_argument("--host", default="0.0.0.0", help="Host to bind (default: 0.0.0.0)")
     parser_start.add_argument("--port", type=int, default=8000, help="Port to bind (default: 8000)")
 
@@ -344,7 +361,9 @@ def main():
     parser_worker = subparsers.add_parser("worker", help="Start the background worker only")
 
     # update
-    parser_update = subparsers.add_parser("update", help="Pull latest images and restart Docker containers")
+    parser_update = subparsers.add_parser(
+        "update", help="Pull latest images and restart Docker containers"
+    )
 
     args = parser.parse_args()
 
