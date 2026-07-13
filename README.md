@@ -16,16 +16,69 @@ This application uses Telegram Userbots via the **Telethon** library to intercep
 ## ✨ Features
 
 - 🏢 **Multi-Merchant Support:** Manages concurrent Telegram Userbots for multiple independent merchants dynamically.
+- 🔒 **Private Whitelisting (Closed Bot):** The bot is completely closed to the public. The main administrator must explicitly add a new merchant's Telegram ID via the **Admin Control Panel** before they can register.
 - 🧠 **Smart Payment Parser:** Uses advanced regex to instantly interpret and normalize transaction amounts from Click, Payme, Uzcard, Humo, and CardXabar notification bots.
 - ⚡ **Collision Management (Uzbekistan UX):** Temporarily augments subsequent identical transaction requests by exactly +1 UZS (100 tiyins) to maintain uniqueness for idempotent processing without using decimals, bypassing the fractional input limitations of popular Uzbek banking apps.
 - 🔗 **Secure Webhook Integration:** Instantly fires asynchronous HTTP webhooks signed with an HMAC (SHA-256) signature for verified backend processing.
 - 🛡️ **Background Health Checking:** An asynchronous daemon runs every 5 minutes to verify if merchant sessions are active and automatically restarts broken connections.
+- ☁️ **Cloudflare Tunnel Ready:** Built-in tools to seamlessly connect your local or VPS deployments to the public internet securely using Cloudflare Tunnels (Zero Trust) without opening any ports.
 
 ---
 
-## 🚀 Installation & Quick Start
+## 🐳 Docker Deployment (Recommended)
 
-You can run `autopaybot` anywhere by simply installing it via `pip`.
+To deploy securely to a Linux VPS, use the interactive wizard which sets up Docker Compose, NGINX, and Cloudflare Tunnels automatically.
+
+### 1. Initial Setup (Wizard)
+Run the built-in wizard. It will interactively ask for your Telegram API credentials and Cloudflare Tunnel token, generating `.env`, `docker-compose.yml`, and `nginx/nginx.conf` for you:
+
+```bash
+pip install autopaybot
+autopay deploy
+```
+*(Follow the interactive terminal instructions to complete the setup)*
+
+### 2. Start the Server
+Once the wizard completes, bring up the containers in the background:
+```bash
+docker compose up -d
+```
+*(The system runs on `ghcr.io/themirmakhmudov/autopaybot:main`)*
+
+### 3. Upgrading to a New Version
+When a new version is released on GitHub, **you do NOT need to run `autopay deploy` again.** All your configurations are safely stored in `.env`.
+To update your server, simply pull the latest image and restart:
+```bash
+docker compose pull
+docker compose up -d
+```
+
+---
+
+## 🤖 Telegram Bot Usage
+
+Search for your bot on Telegram (using the Bot Token you provided during setup) and send `/start`.
+
+### For Administrators
+If your Telegram ID matches `ADMIN_TELEGRAM_IDS` in the `.env` file, sending `/start` will open the **Admin Control Panel**. 
+From here, you can:
+- **➕ Add Merchant:** Whitelist a new user by entering their Telegram ID. Only whitelisted users can connect their accounts!
+- **📊 Stats:** View system-wide statistics (active merchants, total payments processed).
+- **👥 Merchants:** See a list of all registered merchants and their connection status.
+- **📢 Broadcast:** Send a message to all connected merchants.
+
+### For Merchants
+Once a merchant's Telegram ID is whitelisted by the Admin, they can send `/start` to the bot. 
+The bot will guide them to:
+1. Send their phone number.
+2. Enter the Telegram Login Code to authenticate the Userbot.
+3. Once connected, they can generate payment links (`/create`), view their credentials (`/credentials`), and set their destination webhook (`/setwebhook`).
+
+---
+
+## 🚀 Local Installation (Without Docker)
+
+You can run `autopaybot` directly on your host machine for development or testing.
 
 ### 1. Install via pip
 ```bash
@@ -38,7 +91,6 @@ Initialize the project to create your `.env` configuration file interactively:
 ```bash
 autopay init
 ```
-*This setup wizard will prompt you for your `ADMIN_ID` and can automatically generate a cryptographically secure 64-character `API_KEY` for you.*
 
 ### 3. Database Migrations
 Run the embedded Alembic migrations to set up your PostgreSQL (or SQLite) database:
@@ -52,23 +104,6 @@ Run the unified start command to boot both the FastAPI Web Server and the Telegr
 autopay start
 ```
 *(Press `Ctrl+C` to safely shut down both processes).*
-
----
-
-## 🐳 Docker Deployment (Recommended)
-
-Don't want to install Python packages directly? Want to deploy to a Linux VPS safely? Use our interactive Docker scaffolding tool!
-
-1. Generate a production-ready `docker-compose.yml` pointing to our official GitHub Container Registry image:
-   ```bash
-   autopay deploy
-   ```
-2. Bring up the containers in the background:
-   ```bash
-   docker-compose up -d
-   ```
-
-*(Image: `ghcr.io/themirmakhmudov/autopaybot:latest`)*
 
 ---
 
