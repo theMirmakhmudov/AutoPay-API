@@ -105,13 +105,12 @@ def deploy_command(args):
     print("  5. Fill in the published application form EXACTLY like this:")
     print(f"       - Subdomain (optional) : {subdomain}")
     print(f"       - Domain               : {root_domain}")
-    print(f"       - Service Type         : HTTP")
-    print(f"       - Service URL          : autopay_nginx:80")
+    print("       - Service Type         : HTTP")
+    print("       - Service URL          : autopay_nginx:80")
     print("  6. Click 'Save hostname'\n")
 
     tunnel_token = input("👉 Paste your Cloudflare Tunnel Token (eyJh...): ").strip()
 
-    import secrets
     from cryptography.fernet import Fernet
     encryption_key = Fernet.generate_key().decode()
 
