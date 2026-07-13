@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: ghcr.io/themirmakhmudov/autopaybot:latest
+    image: ghcr.io/themirmakhmudov/autopaybot:main
     container_name: autopay_api
     command: sh -c "autopay upgrade && autopay web"
     expose:
@@ -33,7 +33,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: ghcr.io/themirmakhmudov/autopaybot:latest
+    image: ghcr.io/themirmakhmudov/autopaybot:main
     container_name: autopay_worker
     command: autopay worker
     # Map telethon session files if they are generated locally, but we are using string sessions in the DB now!
