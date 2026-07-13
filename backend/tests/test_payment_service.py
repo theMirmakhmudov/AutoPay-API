@@ -30,17 +30,22 @@ def test_create_payment_with_collision(db_session, test_merchant):
     r2 = service.create_payment_intent(test_merchant.id, request)
     assert r2.has_collision is True
     assert r2.force_wait is False
-    assert r2.expected_amount == 35000.01  # + 1 tiyin (+ 0.01 UZS)
+    assert r2.expected_amount == 35001.0  # + 100 tiyins (+ 1.00 UZS)
 
 def test_create_payment_collision_cap(db_session, test_merchant):
     service = PaymentService(db_session)
     request = CreatePaymentRequest(base_amount=35000.0)
 
-    # Create 11 intents to hit the cap (0, 1, 2, ..., 10)
-    for i in range(11):
+    # Create 51 intents (0 to 50) - all should have force_wait=False
+    for i in range(51):
         resp = service.create_payment_intent(test_merchant.id, request)
         assert resp.force_wait is False
-        assert resp.expected_amount == 35000.0 + (i * 0.01)
+        assert resp.expected_amount == 35000.0 + (i * 1.0)
+
+    # 52nd intent should hit the cap and set force_wait=True
+    resp_capped = service.create_payment_intent(test_merchant.id, request)
+    assert resp_capped.force_wait is True
+    assert resp_capped.expected_amount == 35000.0 + 51.0
 
     # The 12th intent should hit the 10 UZS cap limit (which is 1000 tiyins actually wait, earlier logic limited it to base_amount + 10 UZS.
     # Let's see what the logic actually allows. If dynamic increments by 1 tiyin, it takes 1000 requests to hit 10 UZS.
