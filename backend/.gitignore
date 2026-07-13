@@ -9,3 +9,4 @@ config.yml
 .coverage
 dist/
 *.egg-info/
+payment_system.db
