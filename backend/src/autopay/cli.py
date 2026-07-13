@@ -280,7 +280,7 @@ def update_command(args):
         return
 
     print("\n🔄 Updating AutopayBot to the latest version...")
-    os.system("docker compose pull && docker compose up -d")
+    os.system("docker compose pull && docker compose up -d && docker compose restart nginx cloudflared")
     print("✅ Update complete!\n")
 
 
