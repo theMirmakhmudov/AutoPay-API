@@ -7,3 +7,5 @@ backups/
 tunnel.json
 config.yml
 .coverage
+dist/
+*.egg-info/
