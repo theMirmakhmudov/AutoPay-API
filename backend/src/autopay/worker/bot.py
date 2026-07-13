@@ -10,7 +10,13 @@ from telethon.sessions import StringSession
 from autopay.core.config import settings
 from autopay.core.database import SessionLocal
 from autopay.core.encryption import encrypt_session, generate_api_key, generate_webhook_secret
-from autopay.models.payment import Merchant, PaymentIntent, ProcessedPayment, UnparsedMessage
+from autopay.models.payment import (
+    AllowedMerchant,
+    Merchant,
+    PaymentIntent,
+    ProcessedPayment,
+    UnparsedMessage,
+)
 from autopay.schemas.payload import CreatePaymentRequest
 from autopay.services.payment_service import PaymentService
 
@@ -186,10 +192,18 @@ async def start_handler(event):
                 [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
                 [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
                 [Button.inline("📊 View All Payments", b"admin_payments_0")],
-                [Button.inline("❌ Close", b"admin_close")]
+                [Button.inline("➕ Add Merchant", b"admin_add_merchant"), Button.inline("❌ Close", b"admin_close")]
             ]
         )
     else:
+        db = SessionLocal()
+        is_allowed = db.query(AllowedMerchant).filter(AllowedMerchant.telegram_id == str(event.sender_id)).first()
+        db.close()
+
+        if not is_allowed:
+            await event.respond("❌ <b>Access Denied.</b>\n\nYou are not an authorized merchant. Please contact the administrator.", parse_mode='html')
+            return
+
         user_states[event.sender_id] = {"state": "AWAITING_PHONE"}
         await event.respond(
             "<b>👋 Welcome to Auto Payment Gateway!</b>\n\n"
@@ -403,7 +417,7 @@ async def callback_back(event):
             [Button.inline("💰 Revenue", b"admin_revenue"), Button.inline("📈 Recent", b"admin_recent")],
             [Button.inline("⚠️ Errors", b"admin_errors"), Button.inline("📢 Broadcast", b"admin_broadcast")],
             [Button.inline("📊 View All Payments", b"admin_payments_0")],
-            [Button.inline("❌ Close", b"admin_close")]
+            [Button.inline("➕ Add Merchant", b"admin_add_merchant"), Button.inline("❌ Close", b"admin_close")]
         ]
     )
 
@@ -413,6 +427,12 @@ async def callback_close(event):
         return
     await event.delete()
 
+@management_bot.on(events.CallbackQuery(pattern=b'admin_add_merchant'))
+async def callback_add_merchant(event):
+    if not is_admin(event.sender_id):
+        return
+    user_states[event.sender_id] = {"state": "AWAITING_NEW_MERCHANT_ID"}
+    await event.respond("<b>➕ Add a New Merchant</b>\n\nPlease reply with the Telegram User ID of the new merchant.", parse_mode='html')
 
 @management_bot.on(events.NewMessage(pattern='/credentials'))
 async def credentials_handler(event):
@@ -552,6 +572,28 @@ async def message_handler(event):
 
         user_states.pop(user_id, None)
         await event.respond(f"✅ Broadcast sent successfully to {success_count} merchants.")
+        return
+
+    if current_state == "AWAITING_NEW_MERCHANT_ID":
+        if not text.isdigit():
+            await event.respond("❌ Invalid ID. Please send a numeric Telegram User ID.")
+            return
+
+        db = SessionLocal()
+        existing = db.query(AllowedMerchant).filter(AllowedMerchant.telegram_id == text).first()
+        if existing:
+            db.close()
+            await event.respond(f"⚠️ User <code>{text}</code> is already whitelisted.", parse_mode='html')
+            user_states.pop(user_id, None)
+            return
+
+        new_allowed = AllowedMerchant(telegram_id=text)
+        db.add(new_allowed)
+        db.commit()
+        db.close()
+
+        user_states.pop(user_id, None)
+        await event.respond(f"✅ User <code>{text}</code> has been whitelisted! They can now send /start to the bot.", parse_mode='html')
         return
 
     if current_state == "AWAITING_PHONE":

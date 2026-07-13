@@ -10,6 +10,11 @@ from .base import Base
 def generate_uuid():
     return str(uuid.uuid4())
 
+class AllowedMerchant(Base):
+    __tablename__ = "allowed_merchants"
+    telegram_id = Column(String, primary_key=True)
+    added_at = Column(DateTime, default=datetime.utcnow)
+
 class Merchant(Base):
     """
     A tenant on the SaaS platform.
