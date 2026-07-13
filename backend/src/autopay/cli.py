@@ -137,7 +137,7 @@ def web_command(args):
 
 def worker_command(args):
     """Start the Telethon userbot background worker."""
-    from autopay.worker.main import run_worker
+    from autopay.worker.main import main as run_worker
 
     print("Starting Autopay background worker...")
     try:
