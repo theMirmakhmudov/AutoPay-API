@@ -262,6 +262,17 @@ CLOUDFLARE_TUNNEL_TOKEN={tunnel_token}
     print("  docker compose up -d --force-recreate")
 
 
+def update_command(args):
+    """Pulls the latest images and restarts the docker containers."""
+    if not os.path.exists("docker-compose.yml"):
+        print("❌ No docker-compose.yml found. Please run 'autopay deploy' first.")
+        return
+        
+    print("\n🔄 Updating AutopayBot to the latest version...")
+    os.system("docker compose pull && docker compose up -d")
+    print("✅ Update complete!\n")
+
+
 def start_command(args):
     """Start both the FastAPI backend and the background worker simultaneously."""
     print("🚀 Starting AutopayBot Full System...")
