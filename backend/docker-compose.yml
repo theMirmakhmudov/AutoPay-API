@@ -18,11 +18,9 @@ services:
     restart: unless-stopped
 
   api:
-    build: .
+    image: ghcr.io/themirmakhmudov/autopaybot:latest
     container_name: autopay_api
     command: sh -c "autopay upgrade && autopay web"
-    volumes:
-      - .:/app
     expose:
       - "8000"
     env_file:
@@ -35,12 +33,10 @@ services:
     restart: unless-stopped
 
   worker:
-    build: .
+    image: ghcr.io/themirmakhmudov/autopaybot:latest
     container_name: autopay_worker
     command: autopay worker
-    volumes:
-      - .:/app
-      # Map telethon session files if they are generated locally, but we are using string sessions in the DB now!
+    # Map telethon session files if they are generated locally, but we are using string sessions in the DB now!
     env_file:
       - .env
     environment:

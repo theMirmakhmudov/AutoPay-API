@@ -37,30 +37,3 @@ jobs:
         working-directory: ./backend
         run: pytest tests/ -v
 
-  deploy:
-    needs: lint-and-test
-    if: github.ref == 'refs/heads/main'
-    runs-on: self-hosted
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Sync Files to Production Directory
-        run: |
-          # Use rsync to mirror the repository content safely to the actual deployment folder
-          rsync -avz --delete --exclude '.env' --exclude 'venv' --exclude '__pycache__' --exclude 'scratch' --exclude '.git' --exclude 'backups' --exclude 'payment_system.db' ./ ~/AvtoPaymentBot/
-
-      - name: Rebuild & Restart Docker Containers (Bypass ContainerConfig bug)
-        env:
-          SUDO_PASSWORD: ${{ secrets.SUDO_PASSWORD }}
-        run: |
-          cd ~/AvtoPaymentBot/backend
-          # Ensure tunnel.json exists as a file so Docker doesn't create it as a directory
-          if [ -d "tunnel.json" ]; then sudo rm -rf tunnel.json; fi
-          touch tunnel.json
-          # Do the same for config.yml
-          if [ -d "config.yml" ]; then sudo rm -rf config.yml; fi
-          touch config.yml
-          # Provide the sudo password via stdin to safely execute privileged commands
-          echo "$SUDO_PASSWORD" | sudo -S docker rm -f autopay_worker autopay_api || true
-          echo "$SUDO_PASSWORD" | sudo -S docker-compose up --build -d
