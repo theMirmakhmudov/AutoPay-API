@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autopaybot"
-version = "0.1.4"
+version = "0.1.5"
 description = "A Telegram-based automated payment detection system"
 readme = "README.md"
 authors = [
@@ -42,7 +42,9 @@ autopay = "autopay.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["autopay"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.package-data]
 autopay = ["alembic/*", "alembic/**/*", "alembic.ini", "config.yml"]
