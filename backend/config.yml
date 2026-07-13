@@ -1,0 +1,9 @@
+tunnel: bbc3c5b6-e1f1-4304-8d07-5e5c368d58f7
+credentials-file: /etc/cloudflared/cert.json
+
+ingress:
+  - hostname: cerifynow.uz
+    service: http://autopay_nginx:80
+  - hostname: www.cerifynow.uz
+    service: http://autopay_nginx:80
+  - service: http_status:404
