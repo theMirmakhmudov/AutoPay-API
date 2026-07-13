@@ -72,7 +72,7 @@ def deploy_command(args):
             return
 
     domain = input("What is your domain name? (e.g. cerifynow.uz): ").strip()
-    tunnel_uuid = input("What is your Cloudflare Tunnel UUID?: ").strip()
+    tunnel_token = input("What is your Cloudflare Tunnel Token?: ").strip()
 
     compose_template = """version: '3.8'
 
@@ -134,10 +134,9 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: autopay_tunnel
     restart: always
-    command: tunnel run
-    volumes:
-      - ./tunnel.json:/etc/cloudflared/cert.json
-      - ./config.yml:/etc/cloudflared/config.yml
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - nginx
 
@@ -157,28 +156,20 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Proto https;
         }
     }
 }
 """
 
-    config_template = f"""tunnel: {tunnel_uuid}
-credentials-file: /etc/cloudflared/cert.json
 
-ingress:
-  - hostname: {domain}
-    service: http://autopay_nginx:80
-  - hostname: www.{domain}
-    service: http://autopay_nginx:80
-  - service: http_status:404
-"""
 
-    env_template = """TELEGRAM_API_ID=your_api_id
+    env_template = f"""TELEGRAM_API_ID=your_api_id
 TELEGRAM_API_HASH=your_api_hash
 MANAGEMENT_BOT_TOKEN=your_bot_token
 ADMIN_TELEGRAM_IDS=your_admin_id
 ENCRYPTION_KEY=your_encryption_key
+CLOUDFLARE_TUNNEL_TOKEN={tunnel_token}
 """
 
     # Write files
@@ -188,15 +179,14 @@ ENCRYPTION_KEY=your_encryption_key
         f.write(compose_template)
     with open("nginx/nginx.conf", "w") as f:
         f.write(nginx_template)
-    with open("config.yml", "w") as f:
-        f.write(config_template)
 
     if not os.path.exists(".env"):
         with open(".env", "w") as f:
             f.write(env_template)
 
     print("\n✅ Production deployment files generated successfully!")
-    print("\n⚠️ IMPORTANT: You MUST copy your `tunnel.json` file to this folder before starting!")
+    print("\n⚠️ IMPORTANT: You are using a Remotely Managed Cloudflare Tunnel.")
+    print(f"Make sure to add a Public Hostname in your Cloudflare dashboard for {domain} pointing to http://autopay_nginx:80")
     print("\nTo start your bot in production, run:")
     print("  docker-compose up -d")
 
