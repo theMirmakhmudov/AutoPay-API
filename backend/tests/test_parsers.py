@@ -57,3 +57,64 @@ def test_humo_parser(message_text, expected_tiyins):
         assert result is None
     else:
         assert result["amount_tiyins"] == expected_tiyins
+
+from autopay.services.parsers.base_parser import BaseParser
+from autopay.services.parsers.cardxabar_parser import CardXabarParser
+from autopay.services.parsers.dispatcher import ParserDispatcher
+from autopay.services.parsers.generic_parser import GenericParser
+
+
+def test_base_parser_extract_amount():
+    parser = BaseParser()
+    assert parser.extract_amount("35.000,00") == 3500000
+    assert parser.extract_amount("35 000,00") == 3500000
+    assert parser.extract_amount("500,000") == 50000000
+    assert parser.extract_amount("35000") == 3500000
+    assert parser.extract_amount("invalid") == 0
+
+def test_base_parser_not_implemented():
+    parser = BaseParser()
+    try:
+        parser.parse("test")
+    except NotImplementedError:
+        pass
+
+def test_generic_parser():
+    parser = GenericParser()
+    # Test valid message
+    msg = "➕ 35.000,00 UZS 💳 VISA *4183 🕓 15:15 28.05.2026"
+    result = parser.parse(msg)
+    assert result is not None
+    assert result["amount_tiyins"] == 3500000
+    assert result["card_type"] == "VISA"
+    assert result["receiver_card_info"] == "*4183"
+
+    # Test msg without card
+    msg_no_card = "➕ 35.000,00 UZS 🕓 15:15"
+    result_no_card = parser.parse(msg_no_card)
+    assert result_no_card is not None
+    assert result_no_card["amount_tiyins"] == 3500000
+    assert result_no_card["card_type"] == "UNKNOWN"
+    assert result_no_card["receiver_card_info"] is None
+
+    # Test invalid message
+    msg_invalid = "No money here"
+    result_invalid = parser.parse(msg_invalid)
+    assert result_invalid is None
+
+def test_dispatcher():
+    dispatcher = ParserDispatcher()
+
+    # GenericParser will match anything with "➕ 100 UZS"
+    msg = "➕ 100 💳 VISA *4183"
+    result = dispatcher.dispatch("unknown_bot", msg)
+    assert result is not None
+    assert result["amount_tiyins"] == 10000
+    assert result["card_type"] == "VISA"
+
+    # Test no match
+    assert dispatcher.dispatch("unknown_bot", "blah blah") is None
+
+def test_cardxabar_parser():
+    parser = CardXabarParser()
+    assert parser.parse("blah") is None

@@ -31,7 +31,7 @@ class GenericParser(BaseParser):
                 receiver_card = f"*{card_match.group(2)}" # e.g., *4183
 
             return {
-                "amount": amount,
+                "amount_tiyins": amount,
                 "currency": "UZS",
                 "card_type": card_type,
                 "receiver_card_info": receiver_card

@@ -12,8 +12,8 @@ class PaymentRepository:
         self.db = db
 
     # --- Merchant ---
-    def get_merchant_by_api_key(self, api_key: str) -> Optional[Merchant]:
-        return self.db.query(Merchant).filter(Merchant.api_key == api_key).first()
+    def get_merchant_by_api_key(self, api_key_hash: str) -> Optional[Merchant]:
+        return self.db.query(Merchant).filter(Merchant.api_key_hash == api_key_hash).first()
 
     def get_merchant_by_id(self, merchant_id: str) -> Optional[Merchant]:
         return self.db.query(Merchant).filter(Merchant.id == merchant_id).first()
