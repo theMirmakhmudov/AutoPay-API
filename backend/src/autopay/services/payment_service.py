@@ -3,7 +3,7 @@ import hashlib
 import hmac
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
@@ -31,7 +31,7 @@ class PaymentService:
         Fix #1: All amounts handled in tiyins (integer).
         Fix #5: Caps dynamic offset at 10 UZS max.
         """
-        expires_at = datetime.utcnow() + timedelta(minutes=5)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
         base_tiyins = round(request.base_amount * 100)
 
         max_expected = self.repo.get_max_expected_amount_for_base(merchant_id, base_tiyins)

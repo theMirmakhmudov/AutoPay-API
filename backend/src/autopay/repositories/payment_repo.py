@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -50,7 +50,7 @@ class PaymentRepository:
         """
         Fix #1: Integer tiyin comparison — no float precision bugs possible.
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return self.db.query(PaymentIntent).filter(
             PaymentIntent.merchant_id == merchant_id,
             PaymentIntent.expected_amount_tiyins == amount_tiyins,  # Safe: integer comparison
@@ -62,7 +62,7 @@ class PaymentRepository:
         """
         Fix #5: Returns max expected tiyin value for collision detection.
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         active_intents = self.db.query(PaymentIntent).filter(
             PaymentIntent.merchant_id == merchant_id,
             PaymentIntent.base_amount_tiyins == base_amount_tiyins,
@@ -91,7 +91,7 @@ class PaymentRepository:
 
     def expire_old_intents(self) -> int:
         """Fix #3/#8: Bulk expire — called by the cleanup worker. Returns count."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired = self.db.query(PaymentIntent).filter(
             PaymentIntent.status == "PENDING",
             PaymentIntent.expires_at <= now
