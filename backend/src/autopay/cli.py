@@ -62,7 +62,9 @@ SENTRY_DSN=
 
 
 def deploy_command(args):
-    """Generate a docker-compose.yml file for server deployment."""
+    """Generate a production-ready deployment stack for AutopayBot."""
+    import shutil
+    
     if os.path.exists("docker-compose.yml"):
         print("⚠️ A docker-compose.yml file already exists in the current directory.")
         overwrite = input("Do you want to overwrite it? (y/N): ")
@@ -70,36 +72,133 @@ def deploy_command(args):
             print("Aborted.")
             return
 
-    compose_template = """version: '3.8'
+    domain = input("What is your domain name? (e.g. cerifynow.uz): ").strip()
+    tunnel_uuid = input("What is your Cloudflare Tunnel UUID?: ").strip()
+
+    compose_template = f"""version: '3.8'
 
 services:
-  autopay_api:
+  db:
+    image: postgres:15-alpine
+    container_name: autopay_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: autopay
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
     image: ghcr.io/themirmakhmudov/autopaybot:latest
     container_name: autopay_api
-    restart: always
+    command: sh -c "autopay upgrade && autopay web"
     env_file:
       - .env
-    command: ["autopay", "web", "--host", "0.0.0.0", "--port", "8000"]
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./payment_system.db:/app/payment_system.db
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@db:5432/autopay
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 
-  autopay_worker:
+  worker:
     image: ghcr.io/themirmakhmudov/autopaybot:latest
     container_name: autopay_worker
-    restart: always
+    command: autopay worker
     env_file:
       - .env
-    command: ["autopay", "worker"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@db:5432/autopay
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: autopay_nginx
+    ports:
+      - "80:80"
     volumes:
-      - ./payment_system.db:/app/payment_system.db
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: autopay_tunnel
+    restart: always
+    command: tunnel run
+    volumes:
+      - ./tunnel.json:/etc/cloudflared/cert.json
+      - ./config.yml:/etc/cloudflared/config.yml
+    depends_on:
+      - nginx
+
+volumes:
+  postgres_data:
 """
+
+    nginx_template = f"""events {{}}
+
+http {{
+    server {{
+        listen 80;
+        server_name _;
+
+        location / {{
+            proxy_pass http://api:8000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }}
+    }}
+}}
+"""
+
+    config_template = f"""tunnel: {tunnel_uuid}
+credentials-file: /etc/cloudflared/cert.json
+
+ingress:
+  - hostname: {domain}
+    service: http://autopay_nginx:80
+  - hostname: www.{domain}
+    service: http://autopay_nginx:80
+  - service: http_status:404
+"""
+
+    env_template = """TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+MANAGEMENT_BOT_TOKEN=your_bot_token
+ADMIN_TELEGRAM_IDS=your_admin_id
+ENCRYPTION_KEY=your_encryption_key
+"""
+
+    # Write files
+    os.makedirs("nginx", exist_ok=True)
+    
     with open("docker-compose.yml", "w") as f:
         f.write(compose_template)
+    with open("nginx/nginx.conf", "w") as f:
+        f.write(nginx_template)
+    with open("config.yml", "w") as f:
+        f.write(config_template)
+    
+    if not os.path.exists(".env"):
+        with open(".env", "w") as f:
+            f.write(env_template)
 
-    print("✅ docker-compose.yml generated successfully!")
-    print("To start your bot in production, just run:")
+    print("\n✅ Production deployment files generated successfully!")
+    print("\n⚠️ IMPORTANT: You MUST copy your `tunnel.json` file to this folder before starting!")
+    print("\nTo start your bot in production, run:")
     print("  docker-compose up -d")
 
 
