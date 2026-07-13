@@ -92,23 +92,8 @@ class ClientManager:
                         fire_webhook_with_retry(webhook_url, payment.id, intent_id, payment.amount, webhook_secret)
                     )
 
-                # Notify merchant via Telegram
-                try:
-                    from autopay.worker.bot import management_bot
-                    db = SessionLocal()
-                    merchant_record = db.query(Merchant).filter(Merchant.id == merchant_id).first()
-                    db.close()
-                    if merchant_record and merchant_record.name.startswith("Merchant_"):
-                        telegram_user_id = int(merchant_record.name.split("_")[1])
-                        asyncio.create_task(
-                            management_bot.send_message(
-                                telegram_user_id,
-                                f"✅ *Payment Received!*\n\nAmount: `{payment.amount:,.2f} UZS`\nStatus: `PAID`\nIntent ID: `{intent_id}`",
-                                parse_mode='md'
-                            )
-                        )
-                except Exception as notify_err:
-                    logger.error(f"Failed to notify merchant {merchant_id} via Telegram: {notify_err}")
+                # Webhook fires silently. We don't spam the merchant bot anymore.
+                pass
 
             elif result["status"] == "PROCESSED_UNMATCHED":
                 logger.warning(f"[{merchant_id}] Unmatched payment — no open intent for this amount")

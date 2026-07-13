@@ -1,6 +1,10 @@
 import re
 from typing import Any, Dict, Optional
 
+# Pre-compile regex patterns for amount formatting to improve performance
+_WHITESPACE_PATTERN = re.compile(r'\s+')
+_NON_DIGIT_PATTERN = re.compile(r'[^\d.]')
+
 
 class BaseParser:
     """
@@ -22,8 +26,8 @@ class BaseParser:
           "500,000"   -> 50000000  (500000 UZS in tiyins, assuming English comma if no dot)
           "35000"     -> 3500000
         """
-        # Remove all whitespace
-        amount_str = re.sub(r'\s+', '', amount_str)
+        # Remove all whitespace efficiently
+        amount_str = _WHITESPACE_PATTERN.sub('', amount_str)
 
         # If it has both dot and comma, assume European (1.234,56)
         if '.' in amount_str and ',' in amount_str:
@@ -37,7 +41,8 @@ class BaseParser:
                 # Otherwise it's probably a thousands separator (e.g. 500,000)
                 amount_str = amount_str.replace(',', '')
 
-        clean_str = re.sub(r'[^\d.]', '', amount_str)
+        # Remove everything except digits and dot
+        clean_str = _NON_DIGIT_PATTERN.sub('', amount_str)
         try:
             return round(float(clean_str) * 100)  # store as tiyins (integer)
         except ValueError:

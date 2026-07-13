@@ -11,13 +11,14 @@
 
 ---
 
-This application uses Telegram Userbots via the **Telethon** library to intercept incoming transaction notifications from popular payment systems (Click, Payme, Uzcard, Humo) on behalf of merchants. It acts as an integration middleware: parsing transaction SMS/Messages in real-time and automatically firing **Webhooks** to your backend server.
+This application uses Telegram Userbots via the **Telethon** library to intercept incoming transaction notifications exclusively from the **@humocardbot** payment system on behalf of merchants. It acts as an integration middleware: parsing transaction SMS/Messages in real-time and automatically firing **Webhooks** to your backend server.
 
 ## ✨ Features
 
 - 🏢 **Multi-Merchant Support:** Manages concurrent Telegram Userbots for multiple independent merchants dynamically.
 - 🔒 **Private Whitelisting (Closed Bot):** The bot is completely closed to the public. The main administrator must explicitly add a new merchant's Telegram ID via the **Admin Control Panel** before they can register.
-- 🧠 **Smart Payment Parser:** Uses advanced regex to instantly interpret and normalize transaction amounts from Click, Payme, Uzcard, Humo, and CardXabar notification bots.
+- 🧠 **Smart Payment Parser:** Uses advanced regex to instantly interpret and normalize transaction amounts specifically from the **@humocardbot**.
+- 🎯 **Strict Card Monitoring:** Merchants can explicitly set their receiving card's last 4 digits (e.g., `*4183`) using the `/setcard` command to prevent false positives from other outgoing or unrelated transactions.
 - ⚡ **Collision Management (Uzbekistan UX):** Temporarily augments subsequent identical transaction requests by exactly +1 UZS (100 tiyins) to maintain uniqueness for idempotent processing without using decimals, bypassing the fractional input limitations of popular Uzbek banking apps.
 - 🔗 **Secure Webhook Integration:** Instantly fires asynchronous HTTP webhooks signed with an HMAC (SHA-256) signature for verified backend processing.
 - 🛡️ **Background Health Checking:** An asynchronous daemon runs every 5 minutes to verify if merchant sessions are active and automatically restarts broken connections.
@@ -73,6 +74,7 @@ The bot will guide them to:
 1. Send their phone number.
 2. Enter the Telegram Login Code to authenticate the Userbot.
 3. Once connected, they can generate payment links (`/create`), view their credentials (`/credentials`), and set their destination webhook (`/setwebhook`).
+4. **Crucially**, they must link their receiving card (`/setcard *4183`) so the bot knows which incoming transactions to process! If you want to disable card filtering, you can use `/unsetcard`.
 
 ---
 

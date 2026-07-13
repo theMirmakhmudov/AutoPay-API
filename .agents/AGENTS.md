@@ -414,3 +414,5 @@ Before completing any task that involves modifying Python code, you MUST:
 After pushing code to the remote repository, you MUST:
 1. Check the GitHub Actions CI/CD pipeline status (using `gh run list` and `gh run view`) to ensure the pipeline passes successfully.
 2. Only consider the task complete if the pipeline is green.
+
+- Before executing commands like `git push`, `gh workflow run`, or running PyPI release scripts, you MUST ask the user for explicit permission first. Do not deploy or push changes autonomously without confirmation.

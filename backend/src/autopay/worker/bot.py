@@ -168,6 +168,8 @@ async def start_handler(event):
                 BotCommand(command="status", description="Check connection status"),
                 BotCommand(command="create", description="Generate a payment intent"),
                 BotCommand(command="setwebhook", description="Set webhook URL"),
+                BotCommand(command="setcard", description="Set receiving card last 4 digits"),
+                BotCommand(command="unsetcard", description="Remove receiving card filter"),
                 BotCommand(command="disconnect", description="Disconnect your Telegram account")
             ]
             admin_cmds = [
@@ -512,6 +514,38 @@ async def setwebhook_handler(event):
         merchant.webhook_url = url
         db.commit()
         await event.respond(f"✅ Webhook URL set to: <code>{url}</code>", parse_mode='html')
+    else:
+        await event.respond("❌ Merchant not found.")
+    db.close()
+
+@management_bot.on(events.NewMessage(pattern=r'/setcard (.+)'))
+async def setcard_handler(event):
+    mask = event.pattern_match.group(1).strip()
+    # Mask is typically 4 digits, maybe preceded by a *, e.g. "*4183" or "4183"
+    mask_digits = mask.replace('*', '').strip()
+    if not mask_digits.isdigit() or len(mask_digits) < 4:
+        await event.respond("❌ Card mask should contain the last 4 digits (e.g. *4183 or 4183)")
+        return
+    db = SessionLocal()
+    merchant_name = f"Merchant_{event.sender_id}"
+    merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
+    if merchant:
+        merchant.receiving_card_mask = mask
+        db.commit()
+        await event.respond(f"✅ Receiving card mask set to: <code>{mask}</code>", parse_mode='html')
+    else:
+        await event.respond("❌ Merchant not found.")
+    db.close()
+
+@management_bot.on(events.NewMessage(pattern='/unsetcard'))
+async def unsetcard_handler(event):
+    db = SessionLocal()
+    merchant_name = f"Merchant_{event.sender_id}"
+    merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
+    if merchant:
+        merchant.receiving_card_mask = None
+        db.commit()
+        await event.respond("✅ Receiving card mask removed. All matched payments will be processed without card verification.", parse_mode='html')
     else:
         await event.respond("❌ Merchant not found.")
     db.close()

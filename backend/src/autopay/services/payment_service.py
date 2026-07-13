@@ -112,7 +112,23 @@ class PaymentService:
             "status": "UNMATCHED"
         }
 
-        # 4. Match to a pending intent — Fix #1: integer comparison, no float bugs
+        # 4. Enforce receiving card mask if configured by merchant
+        merchant = self.repo.get_merchant_by_id(merchant_id)
+        if merchant and merchant.receiving_card_mask:
+            receiver_card = parsed_data.get("receiver_card_info")
+            # Compare the last 4 digits (ignoring asterisks)
+            mask_digits = merchant.receiving_card_mask.replace('*', '').strip()
+            if not receiver_card or not receiver_card.endswith(mask_digits):
+                self.repo.save_unparsed_message(
+                    merchant_id=merchant_id,
+                    message_id=payload.message_id,
+                    chat_username=payload.chat_username,
+                    raw_text=payload.raw_text,
+                    error_reason=f"Card mismatch: Expected {merchant.receiving_card_mask}, got {receiver_card}"
+                )
+                return {"status": "ERROR", "message": f"Card mismatch: Expected {merchant.receiving_card_mask}"}
+
+        # 5. Match to a pending intent — Fix #1: integer comparison, no float bugs
         active_intent = self.repo.get_active_intent_by_amount(merchant_id, amount_tiyins)
 
         if active_intent:

@@ -87,7 +87,7 @@ def deploy_command(args):
             display_prompt = f"{prompt_msg} [{default_val}]: "
         else:
             display_prompt = f"{prompt_msg}: "
-            
+
         user_input = input(display_prompt).strip()
         return user_input if user_input else default_val
 
@@ -98,13 +98,13 @@ def deploy_command(args):
 
     print("ℹ️ Get your API_ID and API_HASH from https://my.telegram.org (App API ID)")
     api_id = prompt_env("👉 TELEGRAM_API_ID (e.g. 12345678)", "TELEGRAM_API_ID")
-    
+
     print("\nℹ️ The hash is a long string of letters and numbers from my.telegram.org")
     api_hash = prompt_env("👉 TELEGRAM_API_HASH (e.g. abc123def...)", "TELEGRAM_API_HASH")
-    
+
     print("\nℹ️ Get your Bot Token by creating a new bot with @BotFather on Telegram")
     bot_token = prompt_env("👉 MANAGEMENT_BOT_TOKEN (e.g. 12345:ABC-DEF...)", "MANAGEMENT_BOT_TOKEN")
-    
+
     print("\nℹ️ Your personal Telegram User ID (e.g. from @userinfobot) to access the Admin Panel")
     admin_id = prompt_env("👉 ADMIN_TELEGRAM_IDS (e.g. 987654321)", "ADMIN_TELEGRAM_IDS")
 
@@ -267,7 +267,7 @@ def update_command(args):
     if not os.path.exists("docker-compose.yml"):
         print("❌ No docker-compose.yml found. Please run 'autopay deploy' first.")
         return
-        
+
     print("\n🔄 Updating AutopayBot to the latest version...")
     os.system("docker compose pull && docker compose up -d")
     print("✅ Update complete!\n")

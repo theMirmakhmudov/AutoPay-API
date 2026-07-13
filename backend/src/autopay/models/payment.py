@@ -36,6 +36,9 @@ class Merchant(Base):
     webhook_url = Column(String, nullable=True)
     webhook_secret = Column(String, nullable=True)
 
+    # The card mask expected for incoming payments (e.g. "*4183")
+    receiving_card_mask = Column(String, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     payments = relationship("ProcessedPayment", back_populates="merchant")
