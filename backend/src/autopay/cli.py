@@ -94,7 +94,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: ghcr.io/themirmakhmudov/autopaybot:latest
+    image: ghcr.io/themirmakhmudov/autopaybot:main
     container_name: autopay_api
     command: sh -c "autopay upgrade && autopay web"
     env_file:
@@ -107,7 +107,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: ghcr.io/themirmakhmudov/autopaybot:latest
+    image: ghcr.io/themirmakhmudov/autopaybot:main
     container_name: autopay_worker
     command: autopay worker
     env_file:
