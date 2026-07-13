@@ -46,8 +46,9 @@ def test_uzcard_parser(message_text, expected_tiyins):
         assert result["amount_tiyins"] == expected_tiyins
 
 @pytest.mark.parametrize("message_text,expected_tiyins", [
-    ("➕ 35000 UZS\nHUMO *1234", 3500000),
-    ("➕ 1234.56 UZS\nHUMO *1234", 123456),
+    ("🎉 To'ldirish\n➕ 35000 UZS\nHUMO *1234", 3500000),
+    ("To'ldirish ➕ 1234.56 UZS\nHUMO *1234", 123456),
+    ("➕ 35000 UZS\nHUMO *1234 (Missing word)", None),
     ("Invalid humo text without plus", None),
 ])
 def test_humo_parser(message_text, expected_tiyins):
@@ -105,8 +106,8 @@ def test_generic_parser():
 def test_dispatcher():
     dispatcher = ParserDispatcher()
 
-    # GenericParser will match anything with "➕ 100 UZS"
-    msg = "➕ 100 💳 VISA *4183"
+    # Dispatcher now strictly falls back to HumoParser, which requires "To'ldirish" and "UZS"
+    msg = "To'ldirish ➕ 100 UZS 💳 VISA *4183"
     result = dispatcher.dispatch("unknown_bot", msg)
     assert result is not None
     assert result["amount_tiyins"] == 10000
