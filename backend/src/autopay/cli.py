@@ -31,14 +31,14 @@ def init_command(args):
 
     print("\n🚀 Welcome to AutopayBot Initialization!")
     print("-" * 40)
-    
+
     admin_id = input("1. Enter your Telegram Admin ID (e.g., 123456789): ").strip()
     if not admin_id:
         print("Admin ID is required! Aborting.")
         return
 
     generate_key = input("2. Do you want to automatically generate a secure API_KEY? (Y/n): ").strip().lower()
-    
+
     if generate_key == 'n':
         api_key = input("   Enter your custom API_KEY: ").strip()
     else:
@@ -53,7 +53,7 @@ SENTRY_DSN=
 """
     with open(".env", "w") as f:
         f.write(env_template)
-    
+
     print("-" * 40)
     print("✅ .env file successfully created!")
     print("Next steps:")
@@ -97,7 +97,7 @@ services:
 """
     with open("docker-compose.yml", "w") as f:
         f.write(compose_template)
-    
+
     print("✅ docker-compose.yml generated successfully!")
     print("To start your bot in production, just run:")
     print("  docker-compose up -d")
@@ -106,7 +106,7 @@ services:
 def start_command(args):
     """Start both the FastAPI backend and the background worker simultaneously."""
     print("🚀 Starting AutopayBot Full System...")
-    
+
     # Run both commands as subprocesses
     web_process = subprocess.Popen([sys.executable, "-m", "autopay", "web", "--host", args.host, "--port", str(args.port)])
     worker_process = subprocess.Popen([sys.executable, "-m", "autopay", "worker"])
