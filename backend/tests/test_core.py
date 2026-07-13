@@ -22,7 +22,11 @@ def test_get_db():
         pass
 
 
-def test_encryption_functions():
+def test_encryption_functions(monkeypatch):
+    from cryptography.fernet import Fernet
+    import autopay.core.config
+    monkeypatch.setattr(autopay.core.config.settings, "ENCRYPTION_KEY", Fernet.generate_key().decode())
+    
     original = "test_session_string"
     encrypted = encrypt_session(original)
     assert encrypted != original
