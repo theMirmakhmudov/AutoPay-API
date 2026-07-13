@@ -57,16 +57,6 @@ services:
       - api
     restart: unless-stopped
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: autopay_tunnel
-    restart: always
-    command: tunnel run
-    volumes:
-      - ./tunnel.json:/etc/cloudflared/cert.json
-      - ./config.yml:/etc/cloudflared/config.yml
-    depends_on:
-      - nginx
 
   db-backup:
     image: prodrigestivill/postgres-backup-local
