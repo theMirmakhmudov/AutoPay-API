@@ -66,10 +66,30 @@ def deploy_command(args):
 
     if os.path.exists("docker-compose.yml"):
         print("⚠️ A docker-compose.yml file already exists in the current directory.")
-        overwrite = input("Do you want to overwrite it? (y/N): ")
+        overwrite = input("Do you want to run the wizard again and overwrite it? (y/N): ")
         if overwrite.lower() != 'y':
-            print("Aborted.")
+            print("Aborted. If you just want to update, run: autopay update")
             return
+
+    # Parse existing .env if present
+    env_data = {}
+    if os.path.exists(".env"):
+        with open(".env", "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, val = line.split("=", 1)
+                    env_data[key.strip()] = val.strip()
+
+    def prompt_env(prompt_msg, key_name):
+        default_val = env_data.get(key_name, "")
+        if default_val:
+            display_prompt = f"{prompt_msg} [{default_val}]: "
+        else:
+            display_prompt = f"{prompt_msg}: "
+            
+        user_input = input(display_prompt).strip()
+        return user_input if user_input else default_val
 
     print("\n" + "═"*70)
     print(" 🛠️  STEP 1: TELEGRAM BOT CONFIGURATION")
@@ -78,16 +98,15 @@ def deploy_command(args):
     print("If you don't have API_ID/HASH, get them from https://my.telegram.org")
     print("Get your Bot Token from @BotFather on Telegram.\n")
 
-    api_id = input("👉 TELEGRAM_API_ID (e.g. 12345678): ").strip()
-    api_hash = input("👉 TELEGRAM_API_HASH (e.g. abc123def...): ").strip()
-    bot_token = input("👉 MANAGEMENT_BOT_TOKEN (e.g. 12345:ABC-DEF...): ").strip()
-    admin_id = input("👉 ADMIN_TELEGRAM_IDS (your Telegram ID, e.g. 987654321): ").strip()
+    api_id = prompt_env("👉 TELEGRAM_API_ID (e.g. 12345678)", "TELEGRAM_API_ID")
+    api_hash = prompt_env("👉 TELEGRAM_API_HASH (e.g. abc123def...)", "TELEGRAM_API_HASH")
+    bot_token = prompt_env("👉 MANAGEMENT_BOT_TOKEN (e.g. 12345:ABC-DEF...)", "MANAGEMENT_BOT_TOKEN")
+    admin_id = prompt_env("👉 ADMIN_TELEGRAM_IDS (your Telegram ID, e.g. 987654321)", "ADMIN_TELEGRAM_IDS")
 
     print("\n" + "═"*70)
     print(" ☁️  STEP 2: CLOUDFLARE TUNNEL (Remotely Managed)")
     print("═"*70)
-    domain = input("👉 What is your full domain name? (e.g. api.cerifynow.uz): ").strip()
-
+    domain = input("👉 What is your full domain name? (e.g. api.cerifynow.uz) [leave empty to skip]: ").strip()
     # Parse domain dynamically
     parts = domain.split('.')
     if len(parts) > 2:
@@ -97,19 +116,20 @@ def deploy_command(args):
         subdomain = "(leave blank)"
         root_domain = domain if domain else "<your-domain>"
 
-    print("\nTo connect your server to your domain without opening ports:")
-    print("  1. Go to: https://dash.cloudflare.com/ -> Networking -> Tunnels")
-    print("  2. Click 'Create a tunnel' -> Select 'Cloudflared' -> Name it (e.g. autopay_api)")
-    print("  3. Copy the long Token (starts with eyJh...) from the 'Install connector' step.")
-    print("  4. Click Next (or go to Configure -> Routes -> Add public hostname)")
-    print("  5. Fill in the published application form EXACTLY like this:")
-    print(f"       - Subdomain (optional) : {subdomain}")
-    print(f"       - Domain               : {root_domain}")
-    print("       - Service Type         : HTTP")
-    print("       - Service URL          : autopay_nginx:80")
-    print("  6. Click 'Save hostname'\n")
+    if domain:
+        print("\nTo connect your server to your domain without opening ports:")
+        print("  1. Go to: https://dash.cloudflare.com/ -> Networking -> Tunnels")
+        print("  2. Click 'Create a tunnel' -> Select 'Cloudflared' -> Name it (e.g. autopay_api)")
+        print("  3. Copy the long Token (starts with eyJh...) from the 'Install connector' step.")
+        print("  4. Click Next (or go to Configure -> Routes -> Add public hostname)")
+        print("  5. Fill in the published application form EXACTLY like this:")
+        print(f"       - Subdomain (optional) : {subdomain}")
+        print(f"       - Domain               : {root_domain}")
+        print("       - Service Type         : HTTP")
+        print("       - Service URL          : autopay_nginx:80")
+        print("  6. Click 'Save hostname'\n")
 
-    tunnel_token = input("👉 Paste your Cloudflare Tunnel Token (eyJh...): ").strip()
+    tunnel_token = prompt_env("👉 Paste your Cloudflare Tunnel Token (eyJh...)", "CLOUDFLARE_TUNNEL_TOKEN")
 
     from cryptography.fernet import Fernet
     encryption_key = Fernet.generate_key().decode()
@@ -307,12 +327,17 @@ def main():
     # worker
     parser_worker = subparsers.add_parser("worker", help="Start the background worker only")
 
+    # update
+    parser_update = subparsers.add_parser("update", help="Pull latest images and restart Docker containers")
+
     args = parser.parse_args()
 
     if args.command == "init":
         init_command(args)
     elif args.command == "deploy":
         deploy_command(args)
+    elif args.command == "update":
+        update_command(args)
     elif args.command == "start":
         start_command(args)
     elif args.command == "upgrade":
