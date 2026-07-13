@@ -94,14 +94,19 @@ def deploy_command(args):
     print("\n" + "═"*70)
     print(" 🛠️  STEP 1: TELEGRAM BOT CONFIGURATION")
     print("═"*70)
-    print("Please provide your Telegram credentials. We'll automatically save them to .env")
-    print("If you don't have API_ID/HASH, get them from https://my.telegram.org")
-    print("Get your Bot Token from @BotFather on Telegram.\n")
+    print("Welcome to the Autopay Deploy Wizard. We'll set up your environment step-by-step.\n")
 
+    print("ℹ️ Get your API_ID and API_HASH from https://my.telegram.org (App API ID)")
     api_id = prompt_env("👉 TELEGRAM_API_ID (e.g. 12345678)", "TELEGRAM_API_ID")
+    
+    print("\nℹ️ The hash is a long string of letters and numbers from my.telegram.org")
     api_hash = prompt_env("👉 TELEGRAM_API_HASH (e.g. abc123def...)", "TELEGRAM_API_HASH")
+    
+    print("\nℹ️ Get your Bot Token by creating a new bot with @BotFather on Telegram")
     bot_token = prompt_env("👉 MANAGEMENT_BOT_TOKEN (e.g. 12345:ABC-DEF...)", "MANAGEMENT_BOT_TOKEN")
-    admin_id = prompt_env("👉 ADMIN_TELEGRAM_IDS (your Telegram ID, e.g. 987654321)", "ADMIN_TELEGRAM_IDS")
+    
+    print("\nℹ️ Your personal Telegram User ID (e.g. from @userinfobot) to access the Admin Panel")
+    admin_id = prompt_env("👉 ADMIN_TELEGRAM_IDS (e.g. 987654321)", "ADMIN_TELEGRAM_IDS")
 
     print("\n" + "═"*70)
     print(" ☁️  STEP 2: CLOUDFLARE TUNNEL (Remotely Managed)")
