@@ -82,7 +82,10 @@ async def send_or_edit_rich_message(event, html_content: str, reply_markup: Opti
 @management_bot.on(events.NewMessage(pattern="/stats"))
 async def stats_handler(event):
     if not is_admin(event.sender_id):
-        await event.respond("❌ Access denied.")
+        await event.respond(
+            "⛔ <b>Kechirasiz!</b> Ushbu amallarni bajarish uchun huquqingiz yo'q.",
+            parse_mode="html",
+        )
         return
 
     db = SessionLocal()
@@ -110,7 +113,10 @@ async def stats_handler(event):
 @management_bot.on(events.NewMessage(pattern="/merchants"))
 async def merchants_handler(event):
     if not is_admin(event.sender_id):
-        await event.respond("❌ Access denied.")
+        await event.respond(
+            "⛔ <b>Kechirasiz!</b> Ushbu amallarni bajarish uchun huquqingiz yo'q.",
+            parse_mode="html",
+        )
         return
 
     db = SessionLocal()
@@ -131,7 +137,10 @@ async def merchants_handler(event):
 @management_bot.on(events.NewMessage(pattern=r"/ban (.+)"))
 async def ban_handler(event):
     if not is_admin(event.sender_id):
-        await event.respond("❌ Access denied.")
+        await event.respond(
+            "⛔ <b>Kechirasiz!</b> Ushbu amallarni bajarish uchun huquqingiz yo'q.",
+            parse_mode="html",
+        )
         return
 
     merchant_id = event.pattern_match.group(1).strip()
@@ -140,7 +149,9 @@ async def ban_handler(event):
 
     if not merchant:
         db.close()
-        await event.respond("❌ Merchant not found.")
+        await event.respond(
+            "😔 <b>Afsuski!</b> Sizning profilingiz tizimdan topilmadi.", parse_mode="html"
+        )
         return
 
     merchant.is_connected = False  # type: ignore
@@ -152,7 +163,8 @@ async def ban_handler(event):
         await _client_manager.stop_client(merchant_id)
 
     await event.respond(
-        f"✅ Merchant <code>{merchant_id}</code> banned and disconnected.", parse_mode="html"
+        f"✅ <b>Ajoyib!</b> Merchant <code>{merchant_id}</code> muvaffaqiyatli ban qilindi va tizimdan uzildi.",
+        parse_mode="html",
     )
 
 
@@ -523,7 +535,9 @@ async def credentials_handler(event):
     db.close()
 
     if not merchant:
-        await event.respond("❌ You are not connected. Send /start")
+        await event.respond(
+            "⚠️ <b>Tizimga ulanmagansiz!</b>\nIltimos, /start orqali ulaning.", parse_mode="html"
+        )
         return
 
     await event.respond(
@@ -542,7 +556,10 @@ async def setcard_handler(event):
     # Mask is typically 4 digits, maybe preceded by a *, e.g. "*4183" or "4183"
     mask_digits = mask.replace("*", "").strip()
     if not mask_digits.isdigit() or len(mask_digits) < 4:
-        await event.respond("❌ Card mask should contain the last 4 digits (e.g. *4183 or 4183)")
+        await event.respond(
+            "⚠️ <b>Noto'g'ri format!</b>\nIltimos, kartaning faqat oxirgi 4 ta raqamini kiriting (Masalan: <code>*4183</code> yoki <code>4183</code>)",
+            parse_mode="html",
+        )
         return
     db = SessionLocal()
     merchant_name = f"Merchant_{event.sender_id}"
@@ -551,10 +568,13 @@ async def setcard_handler(event):
         merchant.receiving_card_mask = mask
         db.commit()
         await event.respond(
-            f"✅ Receiving card mask set to: <code>{mask}</code>", parse_mode="html"
+            f"💳 <b>Muvaffaqiyatli saqlandi!</b>\nQabul qiluvchi karta filtri: <code>{mask}</code> etib belgilandi.",
+            parse_mode="html",
         )
     else:
-        await event.respond("❌ Merchant not found.")
+        await event.respond(
+            "😔 <b>Afsuski!</b> Sizning profilingiz tizimdan topilmadi.", parse_mode="html"
+        )
     db.close()
 
 
@@ -567,13 +587,16 @@ async def unsetcard_handler(event):
     try:
         merchant = db.query(Merchant).filter(Merchant.telegram_id == str(event.sender_id)).first()
         if not merchant:
-            await event.respond("❌ You are not registered.")
+            await event.respond(
+                "😔 <b>Afsuski!</b> Siz tizimdan ro'yxatdan o'tmagansiz.", parse_mode="html"
+            )
             return
 
         merchant.receiving_card_mask = None
         db.commit()
         await event.respond(
-            "✅ Receiving card filter removed. You will receive webhooks for ALL cards again."
+            "🗑️ <b>Karta filtri o'chirildi!</b>\nEndi bot barcha kartalaringizdan SMS xabarlarni o'qib, webhook jo'natishda davom etadi.",
+            parse_mode="html",
         )
     finally:
         db.close()
@@ -586,20 +609,26 @@ async def setwebhook_handler(event):
 
     url = event.pattern_match.group(1).strip()
     if not url.startswith("http://") and not url.startswith("https://"):
-        await event.respond("❌ Invalid URL. Must start with http:// or https://")
+        await event.respond(
+            "🌐 <b>Noto'g'ri Webhook manzili!</b>\nURL manzil <code>http://</code> yoki <code>https://</code> bilan boshlanishi shart.",
+            parse_mode="html",
+        )
         return
 
     db = SessionLocal()
     try:
         merchant = db.query(Merchant).filter(Merchant.telegram_id == str(event.sender_id)).first()
         if not merchant:
-            await event.respond("❌ You are not registered.")
+            await event.respond(
+                "😔 <b>Afsuski!</b> Siz tizimdan ro'yxatdan o'tmagansiz.", parse_mode="html"
+            )
             return
 
         merchant.webhook_url = url
         db.commit()
         await event.respond(
-            f"✅ Webhook URL successfully updated to:\n<code>{url}</code>", parse_mode="html"
+            f"🚀 <b>Webhook muvaffaqiyatli sozlandi!</b>\nBarcha to'lov xabarlari kelgusida quyidagi manzilga yuboriladi:\n<code>{url}</code>",
+            parse_mode="html",
         )
     finally:
         db.close()
@@ -616,9 +645,12 @@ async def disconnect_handler(event):
         if _client_manager:
             await _client_manager.stop_client(merchant.id)
         db.commit()
-        await event.respond("✅ Your Telegram account has been disconnected from the platform.")
+        await event.respond(
+            "🔌 <b>Sessiya to'xtatildi!</b>\nSizning Telegram hisobingiz platformadan uzildi. Bot endi SMS xabarlaringizni o'qimaydi.",
+            parse_mode="html",
+        )
     else:
-        await event.respond("❌ You are not connected.")
+        await event.respond("⚠️ <b>Siz tizimga ulanmagansiz!</b>", parse_mode="html")
     db.close()
 
 
@@ -639,10 +671,12 @@ async def message_handler(event):
 
     if current_state == "AWAITING_BROADCAST":
         if not text:
-            await event.respond("❌ Broadcast message cannot be empty.")
+            await event.respond(
+                "📝 <b>Xabar bo'sh!</b>\nIltimos, e'lon uchun matn kiriting.", parse_mode="html"
+            )
             return
 
-        await event.respond("⏳ Broadcasting to all merchants...")
+        await event.respond("🚀 <b>Barcha merchantlarga yuborilmoqda...</b>", parse_mode="html")
         db = SessionLocal()
         merchants = db.query(Merchant).all()
         db.close()
@@ -660,12 +694,18 @@ async def message_handler(event):
                 logger.error(f"Failed to broadcast to {m.name}: {e}")
 
         user_states.pop(user_id, None)
-        await event.respond(f"✅ Broadcast sent successfully to {success_count} merchants.")
+        await event.respond(
+            f"✅ <b>E'lon yuborildi!</b>\nJami {success_count} ta faol merchantga xabar yetkazildi.",
+            parse_mode="html",
+        )
         return
 
     if current_state == "AWAITING_NEW_MERCHANT_ID":
         if not text.isdigit():
-            await event.respond("❌ Invalid ID. Please send a numeric Telegram User ID.")
+            await event.respond(
+                "🔢 <b>Noto'g'ri Telegram ID!</b>\nFaqat raqamlardan iborat ID kiriting.",
+                parse_mode="html",
+            )
             return
 
         db = SessionLocal()
@@ -673,7 +713,8 @@ async def message_handler(event):
         if existing:
             db.close()
             await event.respond(
-                f"⚠️ User <code>{text}</code> is already whitelisted.", parse_mode="html"
+                f"✅ <b>Oldin qo'shilgan!</b>\n<code>{text}</code> ID egasi allaqachon ruxsat etilganlar ro'yxatida mavjud.",
+                parse_mode="html",
             )
             user_states.pop(user_id, None)
             return
@@ -685,7 +726,7 @@ async def message_handler(event):
 
         user_states.pop(user_id, None)
         await event.respond(
-            f"✅ User <code>{text}</code> has been whitelisted! They can now send /start to the bot.",
+            f"🎉 <b>Merchant qo'shildi!</b>\n<code>{text}</code> ID egasiga ruxsat berildi. Endi u bemalol /start bosib ulanishi mumkin.",
             parse_mode="html",
         )
         return
@@ -693,12 +734,14 @@ async def message_handler(event):
     if current_state == "AWAITING_PHONE":
         if not text.startswith("+") or len(text) < 10:
             await event.respond(
-                "Please send a valid phone number (e.g. <code>+998901234567</code>)",
+                "📱 <b>Telefon raqam noto'g'ri!</b>\nIltimos, to'g'ri xalqaro formatda kiriting (Masalan: <code>+998901234567</code>)",
                 parse_mode="html",
             )
             return
 
-        await event.respond("⏳ Sending Telegram login code...")
+        await event.respond(
+            "📨 <b>Tasdiqlash kodi yuborilmoqda...</b> Iltimos, kutib turing.", parse_mode="html"
+        )
         temp_client = TelegramClient(StringSession(), API_ID, API_HASH)
         await temp_client.connect()
 
@@ -725,7 +768,8 @@ async def message_handler(event):
     elif current_state == "AWAITING_CODE":
         if not text.upper().startswith("CODE "):
             await event.respond(
-                "Please reply with the code in format: <code>CODE 12345</code>", parse_mode="html"
+                "⚠️ <b>Noto'g'ri format!</b>\nKodni quyidagicha yuboring:\n<code>CODE 12345</code>",
+                parse_mode="html",
             )
             return
 
@@ -747,7 +791,10 @@ async def message_handler(event):
             )
         except Exception as e:
             logger.error(f"sign_in failed: {e}")
-            await event.respond(f"❌ Verification failed: {e}\nSend /start to try again.")
+            await event.respond(
+                f"❌ <b>Ulanishda xatolik yuz berdi:</b> {e}\nQaytadan urinib ko'rish uchun /start tugmasini bosing.",
+                parse_mode="html",
+            )
             await _cleanup_state(user_id)
 
     elif current_state == "AWAITING_2FA":
@@ -758,7 +805,10 @@ async def message_handler(event):
             await _finish_login(event, temp_client, phone, user_id)
         except Exception as e:
             logger.error(f"2FA sign_in failed: {e}")
-            await event.respond("❌ Wrong password. Send /start to try again.")
+            await event.respond(
+                "❌ <b>Parol noto'g'ri!</b>\nQaytadan urinib ko'rish uchun /start tugmasini bosing.",
+                parse_mode="html",
+            )
             await _cleanup_state(user_id)
 
 
@@ -791,11 +841,11 @@ async def _finish_login(event, temp_client: TelegramClient, phone: str, user_id:
         logger.info(f"Hot-loaded userbot for new merchant {new_merchant.id}")
 
     await event.respond(
-        f"<b>✅ Account linked!</b>\n\n"
-        f"<b>🆔 Merchant ID:</b> <code>{new_merchant.id}</code>\n"
-        f"<b>🔑 API Key:</b> <code>{raw_api_key}</code>\n"
-        f"<b>🛡️ Webhook Secret:</b> <code>{webhook_secret}</code>\n\n"
-        f"⚠️ <b>Save these secrets now — they will never be shown again!</b>\n"
-        f"Your account is now ready to receive automated payment webhook notifications.",
+        f"🎉 <b>Tabriklaymiz! Hisobingiz muvaffaqiyatli ulandi!</b> ✨\n\n"
+        f"🆔 <b>Sizning Merchant ID:</b> <code>{new_merchant.id}</code>\n"
+        f"🔑 <b>Maxfiy API Kalit:</b> <code>{raw_api_key}</code>\n"
+        f"🛡️ <b>Webhook Secret:</b> <code>{webhook_secret}</code>\n\n"
+        f"⚠️ <b>DIQQAT! Bu ma'lumotlarni darhol xavfsiz joyga saqlab qo'ying. Ular boshqa hech qachon ko'rsatilmaydi!</b> ⚠️\n"
+        f"🚀 <i>Sizning profilingiz to'lovlarni avtomatik qabul qilishga tayyor!</i>",
         parse_mode="html",
     )
