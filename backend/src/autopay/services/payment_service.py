@@ -154,8 +154,8 @@ class PaymentService:
                 "webhook_secret": merchant.webhook_secret if merchant else None,
             }
         else:
-            saved_payment = self.repo.save_payment(db_payment_data)
-            return {"status": "PROCESSED_UNMATCHED", "payment": saved_payment}
+            # We explicitly DO NOT save unmatched payments to avoid cluttering the database.
+            return {"status": "PROCESSED_UNMATCHED", "payment": None, "amount": amount_tiyins}
 
 
 async def fire_webhook_with_retry(

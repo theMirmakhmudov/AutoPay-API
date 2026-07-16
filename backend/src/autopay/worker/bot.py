@@ -174,6 +174,7 @@ async def start_handler(event):
                 BotCommand(command="credentials", description="View your Merchant ID and Secrets"),
                 BotCommand(command="setcard", description="Set receiving card last 4 digits"),
                 BotCommand(command="unsetcard", description="Remove receiving card filter"),
+                BotCommand(command="setwebhook", description="Set your webhook URL"),
                 BotCommand(command="disconnect", description="Disconnect your Telegram account"),
             ]
             admin_cmds = [
@@ -240,6 +241,7 @@ async def start_handler(event):
                 BotCommand(command="credentials", description="View your Merchant ID and Secrets"),
                 BotCommand(command="setcard", description="Set receiving card last 4 digits"),
                 BotCommand(command="unsetcard", description="Remove receiving card filter"),
+                BotCommand(command="setwebhook", description="Set your webhook URL"),
                 BotCommand(command="disconnect", description="Disconnect your Telegram account"),
             ]
             await management_bot(
@@ -272,12 +274,15 @@ async def callback_stats(event):
     db.close()
 
     html = (
-        "<b>🛡️ Admin Stats</b>\n"
-        "<blockquote expandable>"
-        f"👥 <b>Merchants:</b> {connected_merchants} active / {total_merchants} total\n"
-        f"📝 <b>Intents:</b> {paid_intents} paid / {total_intents} total\n"
-        f"💰 <b>Payments:</b> {total_payments}\n"
-        "</blockquote>"
+        "<b>📊 Global Statistics</b>\n\n"
+        "<pre>"
+        f"{'Metric':<14} | {'Value'}\n"
+        f"{'-' * 14}-+-{'-' * 14}\n"
+        f"{'Total Mrchnts':<14} | {total_merchants}\n"
+        f"{'Connctd Mrchts':<14} | {connected_merchants}\n"
+        f"{'Total Pymnts':<14} | {total_payments}\n"
+        f"{'Paid Intents':<14} | {paid_intents}\n"
+        "</pre>"
     )
 
     reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
@@ -298,9 +303,14 @@ async def callback_merchants(event):
     if not merchants:
         html += "<i>No merchants found.</i>"
     else:
+        html += "<blockquote expandable>\n"
         for m in merchants:
             status = "🟢" if m.is_connected else "🔴"
-            html += f"{status} <b>{m.phone_number}</b>\n<code>{m.id}</code>\n\n"
+            phone = m.phone_number if m.phone_number else "Unknown Phone"
+            html += f"🧑‍💼 <b>Merchant: {phone}</b>\n"
+            html += f"├ 🔑 <code>{m.id}</code>\n"
+            html += f"└ 🔌 Status: {status}\n\n"
+        html += "</blockquote>"
 
     reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
     await event.answer()
@@ -322,11 +332,13 @@ async def callback_revenue(event):
     db.close()
 
     html = (
-        "<b>💰 Revenue Tracker</b>\n"
-        "<blockquote expandable>"
-        f"<b>Total Volume Processed:</b> {total_revenue:,.2f} UZS\n\n"
-        "<i>(This is the sum of all successfully paid payment intents)</i>"
-        "</blockquote>"
+        "<b>💰 Revenue Tracker</b>\n\n"
+        "<pre>\n"
+        f"{'Metric':<14} | {'Value'}\n"
+        f"{'-' * 14}-+-{'-' * 14}\n"
+        f"{'Total Volume':<14} | {total_revenue:,.0f} UZS\n"
+        "</pre>\n"
+        "<i>(Sum of all successfully paid intents)</i>"
     )
     reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
     await event.answer()
@@ -343,14 +355,19 @@ async def callback_recent(event):
     )
     db.close()
 
-    html = "<b>📈 Recent Transactions</b>\n"
+    html = "<b>📈 Recent Transactions</b>\n\n"
     if not recent:
         html += "<i>No transactions yet.</i>"
     else:
-        html += "<blockquote expandable>"
+        html += "<blockquote expandable>\n"
         for r in recent:
             amount = r.amount_tiyins / 100
-            html += f"<b>{amount:,.2f} UZS</b> via {r.source}\nDate: {r.date_received.strftime('%Y-%m-%d %H:%M')}\nStatus: {r.status}\n\n"
+            source_emoji = "💳" if r.source in ("PAYME", "CLICK") else "🏦"
+            html += (
+                f"{source_emoji} <b>#{r.id[:6]} ({r.source})</b> — 💰 <b>{amount:,.0f} UZS</b>\n"
+            )
+            html += f"├ 📅 <code>{r.date_received.strftime('%Y-%m-%d %H:%M')}</code>\n"
+            html += f"└ ✅ <b>{r.status}</b>\n\n"
         html += "</blockquote>"
 
     reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
@@ -404,7 +421,7 @@ async def callback_payments_table(event):
     if not is_admin(event.sender_id):
         return
     page = int(event.pattern_match.group(1))
-    per_page = 15
+    per_page = 5  # Reduced to 5 to show more detail per item
     offset = page * per_page
 
     db = SessionLocal()
@@ -419,28 +436,20 @@ async def callback_payments_table(event):
     )
     db.close()
 
-    html = f"<b>📊 Payments Database (Page {page + 1})</b>\n\n<pre>"
-    html += f"{'Date':<6}|{'Phone':<9}|{'Amount':<6}|{'Src':<4}\n"
-    html += "-" * 28 + "\n"
-
-    for p, m in payments:
-        date_str = p.date_received.strftime("%m-%d")
-        phone = m.phone_number[-9:] if (m.phone_number and len(m.phone_number) >= 9) else "Unknown"
-        amt = p.amount_tiyins / 100
-        if amt >= 1000000:
-            amt_str = f"{amt / 1000000:.1f}M"
-        elif amt >= 1000:
-            amt_str = f"{amt / 1000:.0f}k"
-        else:
-            amt_str = str(int(amt))
-        src = p.source[:4] if p.source else "UNK"
-
-        html += f"{date_str:<6}|{phone:<9}|{amt_str:<6}|{src:<4}\n"
-
-    html += f"</pre>\n<i>Total records: {total_count}</i>"
-
     if total_count == 0:
-        html = "<b>📊 Payments Database</b>\n<i>No payments found.</i>"
+        html = "<b>📊 Payments Database</b>\n\n<i>No payments found.</i>"
+    else:
+        html = f"<b>📊 Payments Database (Page {page + 1})</b>\n\n"
+        html += "<blockquote expandable>\n"
+        for p, m in payments:
+            amt = p.amount_tiyins / 100
+            source_emoji = "💳" if p.source in ("PAYME", "CLICK") else "🏦"
+            html += f"{source_emoji} <b>#{p.id[:6]} ({p.source})</b> — 💰 <b>{amt:,.0f} UZS</b>\n"
+            html += f"├ 📅 <code>{p.date_received.strftime('%Y-%m-%d %H:%M:%S')}</code>\n"
+            html += f"├ 🧑‍💼 Merchant: <code>{m.phone_number or 'Unknown'}</code>\n"
+            html += f"└ ✅ <b>{p.status}</b>\n\n"
+        html += "</blockquote>\n"
+        html += f"<i>Total records: {total_count}</i>"
 
     inline_keyboard = []
     nav_row = []
@@ -551,19 +560,49 @@ async def setcard_handler(event):
 
 @management_bot.on(events.NewMessage(pattern="/unsetcard"))
 async def unsetcard_handler(event):
+    if is_admin(event.sender_id):
+        return
+
     db = SessionLocal()
-    merchant_name = f"Merchant_{event.sender_id}"
-    merchant = db.query(Merchant).filter(Merchant.name == merchant_name).first()
-    if merchant:
+    try:
+        merchant = db.query(Merchant).filter(Merchant.telegram_id == str(event.sender_id)).first()
+        if not merchant:
+            await event.respond("❌ You are not registered.")
+            return
+
         merchant.receiving_card_mask = None
         db.commit()
         await event.respond(
-            "✅ Receiving card mask removed. All matched payments will be processed without card verification.",
-            parse_mode="html",
+            "✅ Receiving card filter removed. You will receive webhooks for ALL cards again."
         )
-    else:
-        await event.respond("❌ Merchant not found.")
-    db.close()
+    finally:
+        db.close()
+
+
+@management_bot.on(events.NewMessage(pattern=r"/setwebhook (.+)"))
+async def setwebhook_handler(event):
+    if is_admin(event.sender_id):
+        return
+
+    url = event.pattern_match.group(1).strip()
+    if not url.startswith("http://") and not url.startswith("https://"):
+        await event.respond("❌ Invalid URL. Must start with http:// or https://")
+        return
+
+    db = SessionLocal()
+    try:
+        merchant = db.query(Merchant).filter(Merchant.telegram_id == str(event.sender_id)).first()
+        if not merchant:
+            await event.respond("❌ You are not registered.")
+            return
+
+        merchant.webhook_url = url
+        db.commit()
+        await event.respond(
+            f"✅ Webhook URL successfully updated to:\n<code>{url}</code>", parse_mode="html"
+        )
+    finally:
+        db.close()
 
 
 @management_bot.on(events.NewMessage(pattern="/disconnect"))
