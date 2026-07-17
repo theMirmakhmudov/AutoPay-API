@@ -26,7 +26,8 @@ dependencies = [
     "slowapi",
     "python-dotenv",
     "alembic",
-    "sentry-sdk"
+    "sentry-sdk",
+    "aiogram>=3.4.0"
 ]
 
 [project.optional-dependencies]
