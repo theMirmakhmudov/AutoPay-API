@@ -83,7 +83,7 @@ async def send_or_edit_rich_message(event, html_content: str, reply_markup: Opti
 async def stats_handler(event):
     if not is_admin(event.sender_id):
         await event.respond(
-            "⛔ <b>Kechirasiz!</b> Ushbu amallarni bajarish uchun huquqingiz yo'q.",
+            "<tg-emoji emoji-id='5395695537687123235'>⛔</tg-emoji> <b>Kechirasiz!</b> Ushbu amallarni bajarish uchun huquqingiz yo'q.",
             parse_mode="html",
         )
         return
@@ -99,11 +99,11 @@ async def stats_handler(event):
     db.close()
 
     html = (
-        "<b>🛡️ Admin Stats</b>\n"
+        "<b><tg-emoji emoji-id='5251203410396458957'>🛡️</tg-emoji> Admin Stats</b>\n"
         "<blockquote expandable>"
-        f"👥 <b>Merchants:</b> {connected_merchants} active / {total_merchants} total\n"
-        f"📝 <b>Intents:</b> {paid_intents} paid / {total_intents} total\n"
-        f"💰 <b>Payments:</b> {total_payments}\n"
+        f"<tg-emoji emoji-id='5372926953978341366'>👥</tg-emoji> <b>Merchants:</b> {connected_merchants} active / {total_merchants} total\n"
+        f"<tg-emoji emoji-id='5373251851074415873'>📝</tg-emoji> <b>Intents:</b> {paid_intents} paid / {total_intents} total\n"
+        f"<tg-emoji emoji-id='5350452584119279096'>💰</tg-emoji> <b>Payments:</b> {total_payments}\n"
         "</blockquote>"
     )
 
@@ -114,7 +114,7 @@ async def stats_handler(event):
 async def merchants_handler(event):
     if not is_admin(event.sender_id):
         await event.respond(
-            "⛔ <b>Kechirasiz!</b> Ushbu amallarni bajarish uchun huquqingiz yo'q.",
+            "<tg-emoji emoji-id='5395695537687123235'>⛔</tg-emoji> <b>Kechirasiz!</b> Ushbu amallarni bajarish uchun huquqingiz yo'q.",
             parse_mode="html",
         )
         return
@@ -123,12 +123,12 @@ async def merchants_handler(event):
     merchants = db.query(Merchant).all()
     db.close()
 
-    html = "<b>👥 Registered Merchants</b>\n\n"
+    html = "<b><tg-emoji emoji-id='5372926953978341366'>👥</tg-emoji> Registered Merchants</b>\n\n"
     if not merchants:
         html += "<i>No merchants found.</i>"
     else:
         for m in merchants:
-            status = "🟢" if m.is_connected else "🔴"
+            status = "<tg-emoji emoji-id='5981066684977384749'>🟢</tg-emoji>" if m.is_connected else "<tg-emoji emoji-id='5981335554225081686'>🔴</tg-emoji>"
             html += f"{status} <b>{m.phone_number}</b>\n<code>{m.id}</code>\n\n"
 
     await send_or_edit_rich_message(event, html)
@@ -138,7 +138,7 @@ async def merchants_handler(event):
 async def ban_handler(event):
     if not is_admin(event.sender_id):
         await event.respond(
-            "⛔ <b>Kechirasiz!</b> Ushbu amallarni bajarish uchun huquqingiz yo'q.",
+            "<tg-emoji emoji-id='5395695537687123235'>⛔</tg-emoji> <b>Kechirasiz!</b> Ushbu amallarni bajarish uchun huquqingiz yo'q.",
             parse_mode="html",
         )
         return
@@ -150,7 +150,7 @@ async def ban_handler(event):
     if not merchant:
         db.close()
         await event.respond(
-            "😔 <b>Afsuski!</b> Sizning profilingiz tizimdan topilmadi.", parse_mode="html"
+            "<tg-emoji emoji-id='5366116089329646883'>😔</tg-emoji> <b>Afsuski!</b> Sizning profilingiz tizimdan topilmadi.", parse_mode="html"
         )
         return
 
@@ -163,7 +163,7 @@ async def ban_handler(event):
         await _client_manager.stop_client(merchant_id)
 
     await event.respond(
-        f"✅ <b>Ajoyib!</b> Merchant <code>{merchant_id}</code> muvaffaqiyatli ban qilindi va tizimdan uzildi.",
+        f"<tg-emoji emoji-id='5427009714745517609'>✅</tg-emoji> <b>Ajoyib!</b> Merchant <code>{merchant_id}</code> muvaffaqiyatli ban qilindi va tizimdan uzildi.",
         parse_mode="html",
     )
 
@@ -206,7 +206,7 @@ async def start_handler(event):
             logger.error(f"Failed to set admin commands menu: {e}")
 
         await event.respond(
-            "<b>🛡️ Admin Control Panel</b>",
+            "<b><tg-emoji emoji-id='5251203410396458957'>🛡️</tg-emoji> Admin Control Panel</b>",
             parse_mode="html",
             buttons=[
                 [
@@ -239,7 +239,7 @@ async def start_handler(event):
 
         if not is_allowed:
             await event.respond(
-                "❌ <b>Access Denied.</b>\n\nYou are not an authorized merchant. Please contact the administrator.",
+                "<tg-emoji emoji-id='5800887979366944343'>❌</tg-emoji> <b>Access Denied.</b>\n\nYou are not an authorized merchant. Please contact the administrator.",
                 parse_mode="html",
             )
             return
@@ -286,7 +286,7 @@ async def callback_stats(event):
     db.close()
 
     html = (
-        "<b>📊 Global Statistics</b>\n\n"
+        "<b><tg-emoji emoji-id='5431577498364158238'>📊</tg-emoji> Global Statistics</b>\n\n"
         "<pre>"
         f"{'Metric':<14} | {'Value'}\n"
         f"{'-' * 14}-+-{'-' * 14}\n"
@@ -311,16 +311,16 @@ async def callback_merchants(event):
     merchants = db.query(Merchant).all()
     db.close()
 
-    html = "<b>👥 Registered Merchants</b>\n\n"
+    html = "<b><tg-emoji emoji-id='5372926953978341366'>👥</tg-emoji> Registered Merchants</b>\n\n"
     if not merchants:
         html += "<i>No merchants found.</i>"
     else:
         html += "<blockquote expandable>\n"
         for m in merchants:
-            status = "🟢" if m.is_connected else "🔴"
+            status = "<tg-emoji emoji-id='5981066684977384749'>🟢</tg-emoji>" if m.is_connected else "<tg-emoji emoji-id='5981335554225081686'>🔴</tg-emoji>"
             phone = m.phone_number if m.phone_number else "Unknown Phone"
-            html += f"🧑‍💼 <b>Merchant: {phone}</b>\n"
-            html += f"├ 🔑 <code>{m.id}</code>\n"
+            html += f"<tg-emoji emoji-id='5373012449597335010'><tg-emoji emoji-id='5373012449597335010'>🧑‍💼</tg-emoji></tg-emoji> <b>Merchant: {phone}</b>\n"
+            html += f"├ <tg-emoji emoji-id='5330115548900501467'>🔑</tg-emoji> <code>{m.id}</code>\n"
             html += f"└ 🔌 Status: {status}\n\n"
         html += "</blockquote>"
 
@@ -344,7 +344,7 @@ async def callback_revenue(event):
     db.close()
 
     html = (
-        "<b>💰 Revenue Tracker</b>\n\n"
+        "<b><tg-emoji emoji-id='5350452584119279096'>💰</tg-emoji> Revenue Tracker</b>\n\n"
         "<pre>\n"
         f"{'Metric':<14} | {'Value'}\n"
         f"{'-' * 14}-+-{'-' * 14}\n"
@@ -367,19 +367,19 @@ async def callback_recent(event):
     )
     db.close()
 
-    html = "<b>📈 Recent Transactions</b>\n\n"
+    html = "<b><tg-emoji emoji-id='5431736674147114227'>📈</tg-emoji> Recent Transactions</b>\n\n"
     if not recent:
         html += "<i>No transactions yet.</i>"
     else:
         html += "<blockquote expandable>\n"
         for r in recent:
             amount = r.amount_tiyins / 100
-            source_emoji = "💳" if r.source in ("PAYME", "CLICK") else "🏦"
+            source_emoji = "💳" if r.source in ("PAYME", "CLICK") else "<tg-emoji emoji-id='5264895611517300926'>🏦</tg-emoji>"
             html += (
-                f"{source_emoji} <b>#{r.id[:6]} ({r.source})</b> — 💰 <b>{amount:,.0f} UZS</b>\n"
+                f"{source_emoji} <b>#{r.id[:6]} ({r.source})</b> — <tg-emoji emoji-id='5350452584119279096'>💰</tg-emoji> <b>{amount:,.0f} UZS</b>\n"
             )
-            html += f"├ 📅 <code>{r.date_received.strftime('%Y-%m-%d %H:%M')}</code>\n"
-            html += f"└ ✅ <b>{r.status}</b>\n\n"
+            html += f"├ <tg-emoji emoji-id='5431897022456145283'>📅</tg-emoji> <code>{r.date_received.strftime('%Y-%m-%d %H:%M')}</code>\n"
+            html += f"└ <tg-emoji emoji-id='5427009714745517609'>✅</tg-emoji> <b>{r.status}</b>\n\n"
         html += "</blockquote>"
 
     reply_markup = {"inline_keyboard": [[{"text": "⬅️ Back", "callback_data": "admin_back"}]]}
@@ -401,9 +401,9 @@ async def callback_errors(event):
     )
     db.close()
 
-    html = "<b>⚠️ Recent Unparsed Messages (Dead Letter Queue)</b>\n"
+    html = "<b><tg-emoji emoji-id='5420323339723881652'>⚠️</tg-emoji> Recent Unparsed Messages (Dead Letter Queue)</b>\n"
     if not errors:
-        html += "✅ <i>All systems normal. No recent parsing errors.</i>"
+        html += "<tg-emoji emoji-id='5427009714745517609'>✅</tg-emoji> <i>All systems normal. No recent parsing errors.</i>"
     else:
         html += "<blockquote expandable>"
         for e in errors:
@@ -421,7 +421,7 @@ async def callback_broadcast(event):
         return
     user_states[event.sender_id] = {"state": "AWAITING_BROADCAST"}
     await event.edit(
-        "<b>📢 Broadcast Mode Activated</b>\n\n"
+        "<b><tg-emoji emoji-id='5424818078833715060'>📢</tg-emoji> Broadcast Mode Activated</b>\n\n"
         "Send the message you want to broadcast to ALL merchants now. (Or click Back to cancel)",
         parse_mode="html",
         buttons=[[Button.inline("⬅️ Cancel", b"admin_back")]],
@@ -449,17 +449,17 @@ async def callback_payments_table(event):
     db.close()
 
     if total_count == 0:
-        html = "<b>📊 Payments Database</b>\n\n<i>No payments found.</i>"
+        html = "<b><tg-emoji emoji-id='5431577498364158238'>📊</tg-emoji> Payments Database</b>\n\n<i>No payments found.</i>"
     else:
-        html = f"<b>📊 Payments Database (Page {page + 1})</b>\n\n"
+        html = f"<b><tg-emoji emoji-id='5431577498364158238'>📊</tg-emoji> Payments Database (Page {page + 1})</b>\n\n"
         html += "<blockquote expandable>\n"
         for p, m in payments:
             amt = p.amount_tiyins / 100
-            source_emoji = "💳" if p.source in ("PAYME", "CLICK") else "🏦"
-            html += f"{source_emoji} <b>#{p.id[:6]} ({p.source})</b> — 💰 <b>{amt:,.0f} UZS</b>\n"
-            html += f"├ 📅 <code>{p.date_received.strftime('%Y-%m-%d %H:%M:%S')}</code>\n"
-            html += f"├ 🧑‍💼 Merchant: <code>{m.phone_number or 'Unknown'}</code>\n"
-            html += f"└ ✅ <b>{p.status}</b>\n\n"
+            source_emoji = "💳" if p.source in ("PAYME", "CLICK") else "<tg-emoji emoji-id='5264895611517300926'>🏦</tg-emoji>"
+            html += f"{source_emoji} <b>#{p.id[:6]} ({p.source})</b> — <tg-emoji emoji-id='5350452584119279096'>💰</tg-emoji> <b>{amt:,.0f} UZS</b>\n"
+            html += f"├ <tg-emoji emoji-id='5431897022456145283'>📅</tg-emoji> <code>{p.date_received.strftime('%Y-%m-%d %H:%M:%S')}</code>\n"
+            html += f"├ <tg-emoji emoji-id='5373012449597335010'><tg-emoji emoji-id='5373012449597335010'>🧑‍💼</tg-emoji></tg-emoji> Merchant: <code>{m.phone_number or 'Unknown'}</code>\n"
+            html += f"└ <tg-emoji emoji-id='5427009714745517609'>✅</tg-emoji> <b>{p.status}</b>\n\n"
         html += "</blockquote>\n"
         html += f"<i>Total records: {total_count}</i>"
 
@@ -485,7 +485,7 @@ async def callback_back(event):
     if not is_admin(event.sender_id):
         return
     await event.edit(
-        "<b>🛡️ Admin Control Panel</b>",
+        "<b><tg-emoji emoji-id='5251203410396458957'>🛡️</tg-emoji> Admin Control Panel</b>",
         parse_mode="html",
         buttons=[
             [
@@ -522,7 +522,7 @@ async def callback_add_merchant(event):
         return
     user_states[event.sender_id] = {"state": "AWAITING_NEW_MERCHANT_ID"}
     await event.respond(
-        "<b>➕ Add a New Merchant</b>\n\nPlease reply with the Telegram User ID of the new merchant.",
+        "<b><tg-emoji emoji-id='5226945370684140473'>➕</tg-emoji> Add a New Merchant</b>\n\nPlease reply with the Telegram User ID of the new merchant.",
         parse_mode="html",
     )
 
@@ -536,16 +536,16 @@ async def credentials_handler(event):
 
     if not merchant:
         await event.respond(
-            "⚠️ <b>Tizimga ulanmagansiz!</b>\nIltimos, /start orqali ulaning.", parse_mode="html"
+            "<tg-emoji emoji-id='5420323339723881652'>⚠️</tg-emoji> <b>Tizimga ulanmagansiz!</b>\nIltimos, /start orqali ulaning.", parse_mode="html"
         )
         return
 
     await event.respond(
-        f"<b>🔐 Your Credentials</b>\n\n"
-        f"<b>🆔 Merchant ID:</b> <code>{merchant.id}</code>\n"
-        f"<b>🛡️ Webhook Secret:</b> <code>{merchant.webhook_secret}</code>\n"
-        f"<b>🌐 Webhook URL:</b> <code>{merchant.webhook_url or 'Not Set'}</code>\n\n"
-        f"⚠️ <i>Note: For security reasons, your API Key is mathematically hashed. We cannot show it to you. If you lost it, contact an admin to reset it.</i>",
+        f"<b><tg-emoji emoji-id='5472308992514464048'>🔐</tg-emoji> Your Credentials</b>\n\n"
+        f"<b><tg-emoji emoji-id='5422683699130933153'>🆔</tg-emoji> Merchant ID:</b> <code>{merchant.id}</code>\n"
+        f"<b><tg-emoji emoji-id='5251203410396458957'>🛡️</tg-emoji> Webhook Secret:</b> <code>{merchant.webhook_secret}</code>\n"
+        f"<b><tg-emoji emoji-id='5999317873623831250'>🌐</tg-emoji> Webhook URL:</b> <code>{merchant.webhook_url or 'Not Set'}</code>\n\n"
+        f"<tg-emoji emoji-id='5420323339723881652'>⚠️</tg-emoji> <i>Note: For security reasons, your API Key is mathematically hashed. We cannot show it to you. If you lost it, contact an admin to reset it.</i>",
         parse_mode="html",
     )
 
@@ -557,7 +557,7 @@ async def setcard_handler(event):
     mask_digits = mask.replace("*", "").strip()
     if not mask_digits.isdigit() or len(mask_digits) < 4:
         await event.respond(
-            "⚠️ <b>Noto'g'ri format!</b>\nIltimos, kartaning faqat oxirgi 4 ta raqamini kiriting (Masalan: <code>*4183</code> yoki <code>4183</code>)",
+            "<tg-emoji emoji-id='5420323339723881652'>⚠️</tg-emoji> <b>Noto'g'ri format!</b>\nIltimos, kartaning faqat oxirgi 4 ta raqamini kiriting (Masalan: <code>*4183</code> yoki <code>4183</code>)",
             parse_mode="html",
         )
         return
@@ -573,7 +573,7 @@ async def setcard_handler(event):
         )
     else:
         await event.respond(
-            "😔 <b>Afsuski!</b> Sizning profilingiz tizimdan topilmadi.", parse_mode="html"
+            "<tg-emoji emoji-id='5366116089329646883'>😔</tg-emoji> <b>Afsuski!</b> Sizning profilingiz tizimdan topilmadi.", parse_mode="html"
         )
     db.close()
 
@@ -588,14 +588,14 @@ async def unsetcard_handler(event):
         merchant = db.query(Merchant).filter(Merchant.telegram_id == str(event.sender_id)).first()
         if not merchant:
             await event.respond(
-                "😔 <b>Afsuski!</b> Siz tizimdan ro'yxatdan o'tmagansiz.", parse_mode="html"
+                "<tg-emoji emoji-id='5366116089329646883'>😔</tg-emoji> <b>Afsuski!</b> Siz tizimdan ro'yxatdan o'tmagansiz.", parse_mode="html"
             )
             return
 
         merchant.receiving_card_mask = None
         db.commit()
         await event.respond(
-            "🗑️ <b>Karta filtri o'chirildi!</b>\nEndi bot barcha kartalaringizdan SMS xabarlarni o'qib, webhook jo'natishda davom etadi.",
+            "<tg-emoji emoji-id='5775903905498010383'>🗑️</tg-emoji> <b>Karta filtri o'chirildi!</b>\nEndi bot barcha kartalaringizdan SMS xabarlarni o'qib, webhook jo'natishda davom etadi.",
             parse_mode="html",
         )
     finally:
@@ -610,7 +610,7 @@ async def setwebhook_handler(event):
     url = event.pattern_match.group(1).strip()
     if not url.startswith("http://") and not url.startswith("https://"):
         await event.respond(
-            "🌐 <b>Noto'g'ri Webhook manzili!</b>\nURL manzil <code>http://</code> yoki <code>https://</code> bilan boshlanishi shart.",
+            "<tg-emoji emoji-id='5999317873623831250'>🌐</tg-emoji> <b>Noto'g'ri Webhook manzili!</b>\nURL manzil <code>http://</code> yoki <code>https://</code> bilan boshlanishi shart.",
             parse_mode="html",
         )
         return
@@ -620,14 +620,14 @@ async def setwebhook_handler(event):
         merchant = db.query(Merchant).filter(Merchant.telegram_id == str(event.sender_id)).first()
         if not merchant:
             await event.respond(
-                "😔 <b>Afsuski!</b> Siz tizimdan ro'yxatdan o'tmagansiz.", parse_mode="html"
+                "<tg-emoji emoji-id='5366116089329646883'>😔</tg-emoji> <b>Afsuski!</b> Siz tizimdan ro'yxatdan o'tmagansiz.", parse_mode="html"
             )
             return
 
         merchant.webhook_url = url
         db.commit()
         await event.respond(
-            f"🚀 <b>Webhook muvaffaqiyatli sozlandi!</b>\nBarcha to'lov xabarlari kelgusida quyidagi manzilga yuboriladi:\n<code>{url}</code>",
+            f"<tg-emoji emoji-id='5363945077850799577'>🚀</tg-emoji> <b>Webhook muvaffaqiyatli sozlandi!</b>\nBarcha to'lov xabarlari kelgusida quyidagi manzilga yuboriladi:\n<code>{url}</code>",
             parse_mode="html",
         )
     finally:
@@ -650,7 +650,7 @@ async def disconnect_handler(event):
             parse_mode="html",
         )
     else:
-        await event.respond("⚠️ <b>Siz tizimga ulanmagansiz!</b>", parse_mode="html")
+        await event.respond("<tg-emoji emoji-id='5420323339723881652'>⚠️</tg-emoji> <b>Siz tizimga ulanmagansiz!</b>", parse_mode="html")
     db.close()
 
 
@@ -672,11 +672,11 @@ async def message_handler(event):
     if current_state == "AWAITING_BROADCAST":
         if not text:
             await event.respond(
-                "📝 <b>Xabar bo'sh!</b>\nIltimos, e'lon uchun matn kiriting.", parse_mode="html"
+                "<tg-emoji emoji-id='5373251851074415873'>📝</tg-emoji> <b>Xabar bo'sh!</b>\nIltimos, e'lon uchun matn kiriting.", parse_mode="html"
             )
             return
 
-        await event.respond("🚀 <b>Barcha merchantlarga yuborilmoqda...</b>", parse_mode="html")
+        await event.respond("<tg-emoji emoji-id='5363945077850799577'>🚀</tg-emoji> <b>Barcha merchantlarga yuborilmoqda...</b>", parse_mode="html")
         db = SessionLocal()
         merchants = db.query(Merchant).all()
         db.close()
@@ -687,7 +687,7 @@ async def message_handler(event):
                 if m.name.startswith("Merchant_"):
                     m_id = int(m.name.split("_")[1])
                     await management_bot.send_message(
-                        m_id, f"📢 <b>Announcement from Admin</b>\n\n{text}", parse_mode="html"
+                        m_id, f"<tg-emoji emoji-id='5424818078833715060'>📢</tg-emoji> <b>Announcement from Admin</b>\n\n{text}", parse_mode="html"
                     )
                     success_count += 1
             except Exception as e:
@@ -695,7 +695,7 @@ async def message_handler(event):
 
         user_states.pop(user_id, None)
         await event.respond(
-            f"✅ <b>E'lon yuborildi!</b>\nJami {success_count} ta faol merchantga xabar yetkazildi.",
+            f"<tg-emoji emoji-id='5427009714745517609'>✅</tg-emoji> <b>E'lon yuborildi!</b>\nJami {success_count} ta faol merchantga xabar yetkazildi.",
             parse_mode="html",
         )
         return
@@ -703,7 +703,7 @@ async def message_handler(event):
     if current_state == "AWAITING_NEW_MERCHANT_ID":
         if not text.isdigit():
             await event.respond(
-                "🔢 <b>Noto'g'ri Telegram ID!</b>\nFaqat raqamlardan iborat ID kiriting.",
+                "<tg-emoji emoji-id='5377624166436445368'>🔢</tg-emoji> <b>Noto'g'ri Telegram ID!</b>\nFaqat raqamlardan iborat ID kiriting.",
                 parse_mode="html",
             )
             return
@@ -713,7 +713,7 @@ async def message_handler(event):
         if existing:
             db.close()
             await event.respond(
-                f"✅ <b>Oldin qo'shilgan!</b>\n<code>{text}</code> ID egasi allaqachon ruxsat etilganlar ro'yxatida mavjud.",
+                f"<tg-emoji emoji-id='5427009714745517609'>✅</tg-emoji> <b>Oldin qo'shilgan!</b>\n<code>{text}</code> ID egasi allaqachon ruxsat etilganlar ro'yxatida mavjud.",
                 parse_mode="html",
             )
             user_states.pop(user_id, None)
@@ -726,7 +726,7 @@ async def message_handler(event):
 
         user_states.pop(user_id, None)
         await event.respond(
-            f"🎉 <b>Merchant qo'shildi!</b>\n<code>{text}</code> ID egasiga ruxsat berildi. Endi u bemalol /start bosib ulanishi mumkin.",
+            f"<tg-emoji emoji-id='5461151367559121950'>🎉</tg-emoji> <b>Merchant qo'shildi!</b>\n<code>{text}</code> ID egasiga ruxsat berildi. Endi u bemalol /start bosib ulanishi mumkin.",
             parse_mode="html",
         )
         return
@@ -734,13 +734,13 @@ async def message_handler(event):
     if current_state == "AWAITING_PHONE":
         if not text.startswith("+") or len(text) < 10:
             await event.respond(
-                "📱 <b>Telefon raqam noto'g'ri!</b>\nIltimos, to'g'ri xalqaro formatda kiriting (Masalan: <code>+998901234567</code>)",
+                "<tg-emoji emoji-id='5465169893580086142'>📱</tg-emoji> <b>Telefon raqam noto'g'ri!</b>\nIltimos, to'g'ri xalqaro formatda kiriting (Masalan: <code>+998901234567</code>)",
                 parse_mode="html",
             )
             return
 
         await event.respond(
-            "📨 <b>Tasdiqlash kodi yuborilmoqda...</b> Iltimos, kutib turing.", parse_mode="html"
+            "<tg-emoji emoji-id='5406631276042002796'>📨</tg-emoji> <b>Tasdiqlash kodi yuborilmoqda...</b> Iltimos, kutib turing.", parse_mode="html"
         )
         temp_client = TelegramClient(StringSession(), API_ID, API_HASH)
         await temp_client.connect()
@@ -756,19 +756,19 @@ async def message_handler(event):
                 }
             )
             await event.respond(
-                "📩 Code sent! Reply with:\n<code>CODE 12345</code>\n\n"
+                "<tg-emoji emoji-id='5253742260054409879'>📩</tg-emoji> Code sent! Reply with:\n<code>CODE 12345</code>\n\n"
                 "(Prefix with CODE so Telegram doesn't intercept it)",
                 parse_mode="html",
             )
         except Exception as e:
             logger.error(f"send_code_request failed: {e}")
-            await event.respond(f"❌ Failed: {e}")
+            await event.respond(f"<tg-emoji emoji-id='5800887979366944343'>❌</tg-emoji> Failed: {e}")
             await _cleanup_state(user_id)
 
     elif current_state == "AWAITING_CODE":
         if not text.upper().startswith("CODE "):
             await event.respond(
-                "⚠️ <b>Noto'g'ri format!</b>\nKodni quyidagicha yuboring:\n<code>CODE 12345</code>",
+                "<tg-emoji emoji-id='5420323339723881652'>⚠️</tg-emoji> <b>Noto'g'ri format!</b>\nKodni quyidagicha yuboring:\n<code>CODE 12345</code>",
                 parse_mode="html",
             )
             return
@@ -785,14 +785,14 @@ async def message_handler(event):
         except SessionPasswordNeededError:
             state_data["state"] = "AWAITING_2FA"
             await event.respond(
-                "🔐 Your account has <b>Two-Step Verification</b> enabled.\n"
+                "<tg-emoji emoji-id='5472308992514464048'>🔐</tg-emoji> Your account has <b>Two-Step Verification</b> enabled.\n"
                 "Please send your Telegram password now:",
                 parse_mode="html",
             )
         except Exception as e:
             logger.error(f"sign_in failed: {e}")
             await event.respond(
-                f"❌ <b>Ulanishda xatolik yuz berdi:</b> {e}\nQaytadan urinib ko'rish uchun /start tugmasini bosing.",
+                f"<tg-emoji emoji-id='5800887979366944343'>❌</tg-emoji> <b>Ulanishda xatolik yuz berdi:</b> {e}\nQaytadan urinib ko'rish uchun /start tugmasini bosing.",
                 parse_mode="html",
             )
             await _cleanup_state(user_id)
@@ -806,7 +806,7 @@ async def message_handler(event):
         except Exception as e:
             logger.error(f"2FA sign_in failed: {e}")
             await event.respond(
-                "❌ <b>Parol noto'g'ri!</b>\nQaytadan urinib ko'rish uchun /start tugmasini bosing.",
+                "<tg-emoji emoji-id='5800887979366944343'>❌</tg-emoji> <b>Parol noto'g'ri!</b>\nQaytadan urinib ko'rish uchun /start tugmasini bosing.",
                 parse_mode="html",
             )
             await _cleanup_state(user_id)
@@ -841,11 +841,11 @@ async def _finish_login(event, temp_client: TelegramClient, phone: str, user_id:
         logger.info(f"Hot-loaded userbot for new merchant {new_merchant.id}")
 
     await event.respond(
-        f"🎉 <b>Tabriklaymiz! Hisobingiz muvaffaqiyatli ulandi!</b> ✨\n\n"
-        f"🆔 <b>Sizning Merchant ID:</b> <code>{new_merchant.id}</code>\n"
-        f"🔑 <b>Maxfiy API Kalit:</b> <code>{raw_api_key}</code>\n"
-        f"🛡️ <b>Webhook Secret:</b> <code>{webhook_secret}</code>\n\n"
-        f"⚠️ <b>DIQQAT! Bu ma'lumotlarni darhol xavfsiz joyga saqlab qo'ying. Ular boshqa hech qachon ko'rsatilmaydi!</b> ⚠️\n"
-        f"🚀 <i>Sizning profilingiz to'lovlarni avtomatik qabul qilishga tayyor!</i>",
+        f"<tg-emoji emoji-id='5461151367559121950'>🎉</tg-emoji> <b>Tabriklaymiz! Hisobingiz muvaffaqiyatli ulandi!</b> ✨\n\n"
+        f"<tg-emoji emoji-id='5422683699130933153'>🆔</tg-emoji> <b>Sizning Merchant ID:</b> <code>{new_merchant.id}</code>\n"
+        f"<tg-emoji emoji-id='5330115548900501467'>🔑</tg-emoji> <b>Maxfiy API Kalit:</b> <code>{raw_api_key}</code>\n"
+        f"<tg-emoji emoji-id='5251203410396458957'>🛡️</tg-emoji> <b>Webhook Secret:</b> <code>{webhook_secret}</code>\n\n"
+        f"<tg-emoji emoji-id='5420323339723881652'>⚠️</tg-emoji> <b>DIQQAT! Bu ma'lumotlarni darhol xavfsiz joyga saqlab qo'ying. Ular boshqa hech qachon ko'rsatilmaydi!</b> <tg-emoji emoji-id='5420323339723881652'>⚠️</tg-emoji>\n"
+        f"<tg-emoji emoji-id='5363945077850799577'>🚀</tg-emoji> <i>Sizning profilingiz to'lovlarni avtomatik qabul qilishga tayyor!</i>",
         parse_mode="html",
     )

@@ -113,7 +113,7 @@ class ClientManager:
 
     async def health_check_clients(self):
         db = SessionLocal()
-        from autopay.worker.bot import management_bot
+        from autopay.worker.aiogram_bot import bot
 
         admin_ids = [
             int(x.strip()) for x in settings.ADMIN_TELEGRAM_IDS.split(",") if x.strip().isdigit()
@@ -135,10 +135,10 @@ class ClientManager:
                     # Try notifying the merchant
                     if merchant.name.startswith("Merchant_"):
                         telegram_user_id = int(merchant.name.split("_")[1])
-                        alert_msg = "⚠️ *CRITICAL ALERT* ⚠️\n\nYour Telegram session was disconnected or revoked! The bot can no longer read incoming payments.\n\nPlease use `/login` to reconnect your account immediately."
+                        alert_msg = "⚠️ <b>CRITICAL ALERT</b> ⚠️\n\nYour Telegram session was disconnected or revoked! The bot can no longer read incoming payments.\n\nPlease use /start to reconnect your account immediately."
                         try:
-                            await management_bot.send_message(
-                                telegram_user_id, alert_msg, parse_mode="md"
+                            await bot.send_message(
+                                chat_id=telegram_user_id, text=alert_msg, parse_mode="HTML"
                             )
                         except Exception as e:
                             logger.error(
@@ -146,10 +146,10 @@ class ClientManager:
                             )
 
                     # Notify admins
-                    admin_msg = f"🚨 *Merchant Disconnected*\n\nMerchant ID: `{merchant.id}`\nPhone: `{merchant.phone_number}`\n\nThe userbot session was terminated. They have been automatically marked as disconnected."
+                    admin_msg = f"🚨 <b>Merchant Disconnected</b>\n\nMerchant ID: <code>{merchant.id}</code>\nPhone: <code>{merchant.phone_number}</code>\n\nThe userbot session was terminated. They have been automatically marked as disconnected."
                     for admin_id in admin_ids:
                         try:
-                            await management_bot.send_message(admin_id, admin_msg, parse_mode="md")
+                            await bot.send_message(chat_id=admin_id, text=admin_msg, parse_mode="HTML")
                         except Exception as e:
                             pass
 

@@ -44,9 +44,9 @@ def receive_telegram_webhook(
         return create_success_response(
             data={
                 "matched": matched,
-                "payment_id": str(payment.id),
-                "amount": payment.amount,
-                "source": payment.source,
+                "payment_id": str(payment.id) if payment else None,
+                "amount": payment.amount if payment else result.get("amount", 0) / 100,
+                "source": payment.source if payment else "UNKNOWN",
             },
             message="Payment matched!"
             if matched

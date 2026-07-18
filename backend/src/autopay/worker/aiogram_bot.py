@@ -1,21 +1,44 @@
 import logging
 from typing import Any, Dict
-from aiogram import Bot, Dispatcher, F, Router, html
+
+from aiogram import Bot, Dispatcher, F, Router
 from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault, CallbackQuery, InlineKeyboardButton, Message, InputRichMessage
+from aiogram.types import (
+    BotCommand,
+    BotCommandScopeChat,
+    BotCommandScopeDefault,
+    CallbackQuery,
+    InlineKeyboardButton,
+    InputRichMessage,
+    Message,
+    RichBlockDetails,
+    RichBlockParagraph,
+    RichBlockSectionHeading,
+    RichBlockTable,
+    RichBlockTableCell,
+    RichTextBold,
+    RichTextCustomEmoji,
+)
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import func
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 from telethon.sessions import StringSession
+
 from autopay.core.config import settings
 from autopay.core.database import SessionLocal
 from autopay.core.encryption import encrypt_session, generate_api_key, generate_webhook_secret
-from autopay.models.payment import AllowedMerchant, Merchant, PaymentIntent, ProcessedPayment, UnparsedMessage
+from autopay.models.payment import (
+    AllowedMerchant,
+    Merchant,
+    PaymentIntent,
+    ProcessedPayment,
+    UnparsedMessage,
+)
+
 logger = logging.getLogger(__name__)
 API_ID = settings.TELEGRAM_API_ID
 API_HASH = settings.TELEGRAM_API_HASH
@@ -63,7 +86,7 @@ def e(name: str, fallback: str) ->str:
     eid = EMOJIS.get(name)
     if not eid:
         return fallback
-    return html.custom_emoji(fallback, custom_emoji_id=eid)
+    return f"![{fallback}](tg://emoji?id={eid})"
 
 
 def is_admin(user_id: int) ->bool:
@@ -182,30 +205,62 @@ async def send_merchants(target: (Message | CallbackQuery)):
     db = SessionLocal()
     merchants = db.query(Merchant).all()
     db.close()
-    text = f"**{e('group', '👥')} Registered Merchants**\n\n"
+
+    def emoji(name, fallback):
+        eid = EMOJIS.get(name)
+        if eid:
+            return RichTextCustomEmoji(custom_emoji_id=eid, alternative_text=fallback)
+        return fallback
+
+    blocks = [
+        RichBlockSectionHeading(
+            size=1,
+            text=[emoji('group', '👥'), " Registered Merchants"]
+        )
+    ]
+
     if not merchants:
-        text += '*No merchants found.*'
+        blocks.append(RichBlockParagraph(text="*No merchants found.*"))
     else:
-        text += '~View Merchants~\n'
-        text += '| Phone | ID | Status |\n'
-        text += '|:---|:---|:---|\n'
+        cells = [
+            [
+                RichBlockTableCell(align="left", valign="middle", text="Phone", is_header=True),
+                RichBlockTableCell(align="left", valign="middle", text="ID", is_header=True),
+                RichBlockTableCell(align="left", valign="middle", text="Status", is_header=True),
+            ]
+        ]
         for m in merchants:
-            status = e('green_circle', '🟢') if m.is_connected else e(
-                'red_circle', '🔴')
+            status = emoji('green_circle', '🟢') if m.is_connected else emoji('red_circle', '🔴')
             phone = m.phone_number if m.phone_number else 'Unknown Phone'
-            text += (
-                f"| {e('person', '🧑\\u200d💼')} {phone} | `{m.id}` | {status} |\n"
-                )
-        text += '~'
+            cells.append([
+                RichBlockTableCell(align="left", valign="middle", text=[emoji('person', '🧑‍💼'), f" {phone}"]),
+                RichBlockTableCell(align="left", valign="middle", text=str(m.id)),
+                RichBlockTableCell(align="left", valign="middle", text=[status]),
+            ])
+
+        blocks.append(
+            RichBlockDetails(
+                is_open=False,
+                summary=[RichTextBold(text="View Merchants")],
+                blocks=[
+                    RichBlockTable(
+                        is_bordered=True,
+                        is_striped=True,
+                        cells=cells
+                    )
+                ]
+            )
+        )
+
     markup = InlineKeyboardBuilder().row(InlineKeyboardButton(text='🔙 Back',
         callback_data='admin_back')).as_markup() if isinstance(target,
         CallbackQuery) else None
+
+    msg = InputRichMessage(blocks=blocks)
     if isinstance(target, CallbackQuery):
-        await target.message.edit_text(rich_message=InputRichMessage(
-            markdown=text), reply_markup=markup)
+        await target.message.edit_text(rich_message=msg, reply_markup=markup)
     else:
-        await target.answer_rich(rich_message=InputRichMessage(markdown=
-            text), reply_markup=markup)
+        await target.answer_rich(rich_message=msg, reply_markup=markup)
 
 
 @router.message(Command('ban'))
@@ -658,7 +713,7 @@ async def cb_payments(query: CallbackQuery):
     offset = page * per_page
     db = SessionLocal()
     total_count = db.query(ProcessedPayment).count()
-    payments = db.query(ProcessedPayment, Merchant).join(Merchant, 
+    payments = db.query(ProcessedPayment, Merchant).join(Merchant,
         ProcessedPayment.merchant_id == Merchant.id).order_by(ProcessedPayment
         .date_received.desc()).offset(offset).limit(per_page).all()
     db.close()

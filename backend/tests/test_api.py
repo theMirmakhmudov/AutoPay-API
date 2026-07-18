@@ -120,6 +120,9 @@ def test_webhook_merchant_mismatch(client, test_merchant):
 
 
 def test_webhook_duplicate(client, test_merchant):
+    # 1. Create a payment intent for 99000
+    client.post("/api/v1/payments/", json={"base_amount": 99000})
+
     payload = {
         "message_id": 77777,
         "chat_username": "clickuz",
