@@ -236,7 +236,7 @@ async def send_stats(target: (Message | CallbackQuery)):
         else None
     )
     if isinstance(target, CallbackQuery):
-        await target.message.edit_text(
+        await target.message.edit_text(  # type: ignore
             rich_message=InputRichMessage(  # type: ignore
                 markdown=text
             ),
@@ -358,7 +358,7 @@ async def cmd_start(message: Message, state: FSMContext):
         db = SessionLocal()
         is_allowed = (
             db.query(AllowedMerchant)
-            .filter(AllowedMerchant.telegram_id == str(message.from_user.id))
+            .filter(AllowedMerchant.telegram_id == str(message.from_user.id))  # type: ignore
             .first()
         )  # type: ignore
         db.close()
@@ -717,7 +717,7 @@ async def cb_revenue(query: CallbackQuery):
         .row(InlineKeyboardButton(text="🔙 Back", callback_data="admin_back"))
         .as_markup()
     )
-    await query.message.edit_text(
+    await query.message.edit_text(  # type: ignore
         rich_message=InputRichMessage(
             # type: ignore
             markdown=text
@@ -751,7 +751,7 @@ async def cb_recent(query: CallbackQuery):
         .row(InlineKeyboardButton(text="🔙 Back", callback_data="admin_back"))
         .as_markup()
     )
-    await query.message.edit_text(
+    await query.message.edit_text(  # type: ignore
         rich_message=InputRichMessage(
             # type: ignore
             markdown=text
@@ -789,7 +789,7 @@ async def cb_errors(query: CallbackQuery):
         .row(InlineKeyboardButton(text="🔙 Back", callback_data="admin_back"))
         .as_markup()
     )
-    await query.message.edit_text(
+    await query.message.edit_text(  # type: ignore
         rich_message=InputRichMessage(
             # type: ignore
             markdown=text
@@ -808,7 +808,7 @@ async def cb_broadcast(query: CallbackQuery, state: FSMContext):
         .row(InlineKeyboardButton(text="🔙 Cancel", callback_data="admin_back"))
         .as_markup()
     )
-    await query.message.edit_text(
+    await query.message.edit_text(  # type: ignore
         rich_message=InputRichMessage(
             # type: ignore
             markdown=f"""**{e("megaphone", "📢")} Broadcast Mode Activated**
@@ -898,7 +898,7 @@ async def cb_payments(query: CallbackQuery):
     if nav:
         builder.row(*nav)
     builder.row(InlineKeyboardButton(text="🔙 Back", callback_data="admin_back"))
-    await query.message.edit_text(
+    await query.message.edit_text(  # type: ignore
         rich_message=InputRichMessage(
             # type: ignore
             markdown=text
@@ -917,7 +917,7 @@ async def cb_add_merchant(query: CallbackQuery, state: FSMContext):
         .row(InlineKeyboardButton(text="🔙 Cancel", callback_data="admin_back"))
         .as_markup()
     )
-    await query.message.edit_text(
+    await query.message.edit_text(  # type: ignore
         rich_message=InputRichMessage(
             # type: ignore
             markdown=f"""**{e("plus", "➕")} Add a New Merchant**
@@ -965,7 +965,7 @@ async def cb_admin_back(query: CallbackQuery, state: FSMContext):
     if not is_admin(query.from_user.id):
         return
     await state.clear()
-    await query.message.edit_text(
+    await query.message.edit_text(  # type: ignore
         rich_message=InputRichMessage(
             # type: ignore
             markdown=f"**{e('shield', '🛡️')} Admin Control Panel**"
